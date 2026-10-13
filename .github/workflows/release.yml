@@ -1,0 +1,77 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release-aab:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # создание GitHub Release с артефактом
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # versionName = тег (v1.2.3 → 1.2.3), versionCode инкрементирует EAS (autoIncrement)
+      - name: Версия из тега
+        run: |
+          python3 - <<'PY'
+          import json, os
+          tag = os.environ['GITHUB_REF_NAME']
+          version = tag[1:] if tag.startswith('v') else tag
+
+          with open('app.json', encoding='utf-8') as f:
+              cfg = json.load(f)
+          cfg['expo']['version'] = version
+          with open('app.json', 'w', encoding='utf-8') as f:
+              json.dump(cfg, f, ensure_ascii=False, indent=2)
+              f.write('\n')
+
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write(f'APP_VERSION={version}\n')
+          PY
+          echo "Версия приложения: $APP_VERSION"
+
+      - name: Restore own keystore
+        run: |
+          echo "${{ secrets.CREDENTIALS_JSON_B64 }}" | base64 -d > credentials.json
+
+      - run: npm ci
+
+      - name: Build AAB (production, ждём окончания)
+        run: |
+          npx eas-cli build \
+            -p android \
+            --profile production \
+            --non-interactive \
+            --json > build.json
+
+          BUILD_ID=$(python3 -c "import json; print(json.load(open('build.json'))[0]['id'])")
+          echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_ENV"
+
+      - name: Скачать AAB
+        run: |
+          URL=$(npx eas-cli build:view "$BUILD_ID" --json 2>/dev/null \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['artifacts']['buildUrl'])")
+
+          FILE="chrt-tt-${APP_VERSION}.aab"
+          curl -sL -o "$FILE" "$URL"
+          ls -la "$FILE"
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Расписание ЧРТ ${{ env.APP_VERSION }}
+          files: chrt-tt-${{ env.APP_VERSION }}.aab
