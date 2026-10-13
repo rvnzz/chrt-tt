@@ -1,4 +1,7 @@
-name: release
+name: tag-build
+
+# Тег v* → сборка APK (профиль preview) с версией из тега → GitHub Release с APK
+# (AAB c своим ключом подписи при необходимости собирается вручную через eas-build.yml)
 
 on:
   push:
@@ -6,7 +9,7 @@ on:
       - 'v*'
 
 jobs:
-  release-aab:
+  build-apk:
     runs-on: ubuntu-latest
     permissions:
       contents: write # создание GitHub Release с артефактом
@@ -24,7 +27,7 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      # versionName = тег (v1.2.3 → 1.2.3), versionCode инкрементирует EAS (autoIncrement)
+      # versionName = тег (v1.2.3 → 1.2.3); versionCode инкрементирует EAS
       - name: Версия из тега
         run: |
           python3 - <<'PY'
@@ -44,29 +47,25 @@ jobs:
           PY
           echo "Версия приложения: $APP_VERSION"
 
-      - name: Restore own keystore
-        run: |
-          echo "${{ secrets.CREDENTIALS_JSON_B64 }}" | base64 -d > credentials.json
-
       - run: npm ci
 
-      - name: Build AAB (production, ждём окончания)
+      - name: Build APK (preview, ждём окончания)
         run: |
           npx eas-cli build \
             -p android \
-            --profile production \
+            --profile preview \
             --non-interactive \
             --json > build.json
 
           BUILD_ID=$(python3 -c "import json; print(json.load(open('build.json'))[0]['id'])")
           echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_ENV"
 
-      - name: Скачать AAB
+      - name: Скачать APK
         run: |
           URL=$(npx eas-cli build:view "$BUILD_ID" --json 2>/dev/null \
             | python3 -c "import json,sys; print(json.load(sys.stdin)['artifacts']['buildUrl'])")
 
-          FILE="chrt-tt-${APP_VERSION}.aab"
+          FILE="chrt-tt-${APP_VERSION}.apk"
           curl -sL -o "$FILE" "$URL"
           ls -la "$FILE"
 
@@ -74,4 +73,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Расписание ЧРТ ${{ env.APP_VERSION }}
-          files: chrt-tt-${{ env.APP_VERSION }}.aab
+          files: chrt-tt-${{ env.APP_VERSION }}.apk
