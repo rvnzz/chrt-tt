@@ -1,7 +1,8 @@
 import { Stack, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
-import { PUSH_SUPPORTED, useNotificationSettings } from '@/hooks/use-push';
+import { PUSH_SUPPORTED, useNotificationSettings, useNotificationStatus } from '@/hooks/use-push';
+import type { RegistrationStatus } from '@/hooks/use-push';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -15,6 +16,7 @@ export default function ProfileScreen() {
   const [group] = useSelectedGroup();
   const [myTeacher] = useMyTeacher();
   const [notifications, setNotifications] = useNotificationSettings();
+  const notificationStatus = useNotificationStatus();
 
   /** Смена роли: если для новой роли нет данных — сразу к выбору */
   function pickRole(next: 'student' | 'teacher') {
@@ -91,11 +93,13 @@ export default function ProfileScreen() {
             </ThemedView>
           ) : (
             <>
-              <ThemedView type={notifications.enabled ? 'backgroundSelected' : 'backgroundElement'} style={styles.row}>
+              <ThemedView
+                type={notifications.enabled ? 'backgroundSelected' : 'backgroundElement'}
+                style={styles.row}>
                 <View style={styles.rowText}>
                   <ThemedText type="default">Уведомления</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Изменения расписания и напоминания
+                  <ThemedText type="small" themeColor={notificationStatus.state === 'error' ? 'textSecondary' : 'textSecondary'}>
+                    {statusText(notificationStatus, notifications.enabled)}
                   </ThemedText>
                 </View>
                 <Switch
@@ -167,8 +171,22 @@ export default function ProfileScreen() {
   );
 }
 
-function Row({
-  emoji,
+function statusText(status: RegistrationStatus, enabled: boolean): string {
+  if (!enabled) return 'Выключено';
+
+  switch (status.state) {
+    case 'registering':
+      return 'Регистрация…';
+    case 'registered':
+      return 'Подписаны';
+    case 'error':
+      return `Ошибка: ${status.message ?? '—'}`;
+    default:
+      return 'Подключение…';
+  }
+}
+
+function Row({  emoji,
   title,
   subtitle,
   selected,

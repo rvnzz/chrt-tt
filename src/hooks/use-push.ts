@@ -52,6 +52,24 @@ export function useNotificationSettings(): [
   return [value, (next) => storage.set(SETTINGS_KEY, next)];
 }
 
+const STATUS_KEY = 'notifications.status';
+
+export type RegistrationStatus = {
+  state: 'idle' | 'registering' | 'registered' | 'error';
+  message?: string;
+};
+
+export function useNotificationStatus(): RegistrationStatus {
+  return useSyncExternalStore(
+    (cb) => storage.subscribe(STATUS_KEY, cb),
+    () => storage.get(STATUS_KEY, { state: 'idle' } as RegistrationStatus),
+  );
+}
+
+function setStatus(next: RegistrationStatus) {
+  storage.set(STATUS_KEY, next);
+}
+
 type Identity = {
   role: 'student' | 'teacher';
   buildingSlug: string;
@@ -106,22 +124,31 @@ export function usePushSync(): void {
     let cancelled = false;
 
     (async () => {
-      const permission = await ensurePermissions();
+      if (cancelled) return;
+      setStatus({ state: 'registering' });
+
+      const permissionGranted = await ensurePermissions();
       if (cancelled) return;
 
-      if (!permission) {
+      if (!permissionGranted) {
         // Разрешение отклонено — оставляем выключенным, чтобы не перепрашивать
+        setStatus({ state: 'error', message: 'нет разрешения на уведомления' });
         storage.set(SETTINGS_KEY, { ...settings, enabled: false });
         return;
       }
 
-      const { data: token } = await Notifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig?.extra?.eas?.projectId,
-      });
-
-      if (cancelled || typeof token !== 'string' || !token.startsWith('Expo')) return;
-
       try {
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+        const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+
+        if (cancelled || typeof token !== 'string' || !token.startsWith('Expo')) {
+          setStatus({
+            state: 'error',
+            message: 'токен не получен' + (projectId ? '' : ' (eas projectId?)'),
+          });
+          return;
+        }
+
         await registerSubscription({
           expoPushToken: token,
           role: identity.role,
@@ -132,9 +159,14 @@ export function usePushSync(): void {
           tomorrowHour: settings.tomorrowHour,
           tzOffsetMinutes: new Date().getTimezoneOffset(),
         });
+        if (cancelled) return;
+
         storage.set(LAST_TOKEN_KEY, token);
+        setStatus({ state: 'registered' });
       } catch (error) {
+        if (cancelled) return;
         console.warn('[push] регистрация не удалась:', error);
+        setStatus({ state: 'error', message: String(error).slice(0, 120) });
       }
     })();
 
@@ -151,7 +183,8 @@ export function usePushSync(): void {
     if (!token) return;
 
     unregisterSubscription(token)
-      .catch(() => undefined)
+      .then(() => setStatus({ state: 'idle' }))
+      .catch((error) => setStatus({ state: 'error', message: 'не удалось отключить у ' + String(error).slice(0, 80) }))
       .finally(() => storage.remove(LAST_TOKEN_KEY));
   }, [settings.enabled]);
 }
