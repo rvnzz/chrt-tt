@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { OtaBanner } from '@/components/schedule/ota-banner';
 import { queryClient, queryPersister } from '@/api/query-client';
 import { setupNotificationHandler, usePushSync } from '@/hooks/use-push';
 
@@ -28,6 +29,7 @@ export default function TabLayout() {
         <AnimatedSplashOverlay />
         <PushSync />
         <AppTabs />
+        <OtaBanner />
       </ThemeProvider>
     </PersistQueryClientProvider>
   );
