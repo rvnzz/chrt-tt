@@ -3,12 +3,14 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useMemo, useState } from 'react';
 
 import { collectTeacherWeek } from '@/api/derive';
+import { pairTimeMap } from '@/api/bells';
 import { AssignmentCard } from '@/components/schedule/assignment-card';
 import { EmptyState, PairSkeleton } from '@/components/schedule/states';
 import { WeekNav } from '@/components/schedule/week-nav';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
+import { useBellMap } from '@/hooks/use-bells';
 import { useWeek } from '@/hooks/use-week';
 import { formatDate, todayISO, weekdayFull } from '@/utils/date';
 
@@ -22,6 +24,7 @@ export default function TeacherScreen() {
     () => (week.data ? collectTeacherWeek(week.data, teacherId) : []),
     [week.data, teacherId],
   );
+  const bellMap = useBellMap(days.map((day) => day.date));
 
   if (Number.isNaN(teacherId)) {
     return (
@@ -67,7 +70,11 @@ export default function TeacherScreen() {
               </ThemedText>
               <View style={styles.list}>
                 {day.items.map((assignment, index) => (
-                  <AssignmentCard key={`${assignment.pair_number}-${index}`} assignment={assignment} />
+                  <AssignmentCard
+                    key={`${assignment.pair_number}-${index}`}
+                    assignment={assignment}
+                    time={pairTimeMap(bellMap.get(day.date)).get(assignment.pair_number)}
+                  />
                 ))}
               </View>
             </View>

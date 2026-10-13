@@ -159,7 +159,7 @@ export default function ScheduleScreen() {
             )
           ) : myDay && myDay.items.length > 0 ? (
             myDay.items.map((assignment, index) => (
-              <AssignmentCard key={`${assignment.pair_number}-${index}`} assignment={assignment} />
+              <AssignmentCard key={`${assignment.pair_number}-${index}`} assignment={assignment} time={pairTimes.get(assignment.pair_number)} />
             ))
           ) : (
             <EmptyState emoji="☕" title="Занятий нет" description="В этот день ваших пар не запланировано." />

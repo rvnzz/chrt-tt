@@ -5,7 +5,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 type Props = { size?: number };
 
-/** Иконка «настройки»: SF Symbol на iOS, глиф — на Android */
+/** Иконка «настройки»: SF Symbol на iOS, глиф — на Android. Цвет — из темы (виден на любом фоне). */
 export function SettingsIcon({ size = 22 }: Props) {
   const theme = useTheme();
 
@@ -13,5 +13,7 @@ export function SettingsIcon({ size = 22 }: Props) {
     return <SymbolView size={size} name="gearshape" tintColor={theme.text} />;
   }
 
-  return <Text style={{ fontSize: size * 0.95 }}>⚙︎</Text>;
+  return (
+    <Text style={{ fontSize: Math.round(size * 0.95), color: theme.text }}>⚙</Text>
+  );
 }
