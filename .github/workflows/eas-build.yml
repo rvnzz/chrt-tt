@@ -70,3 +70,13 @@ jobs:
 
           echo "build_url=$(python3 -c 'import json; print(json.load(open("build.json"))[0]["buildUrl"])')" >> "$GITHUB_OUTPUT"
           echo " Artifact: $(python3 -c 'import json; print(json.load(open("build.json"))[0]["buildUrl"])')"
+
+      - name: Publish OTA update
+        if: ${{ steps.tagcheck.outputs.is_tag != 'true' }}
+        run: |
+          npx eas-cli update \
+            --channel "$CHANNEL" \
+            --message "GitHub ${GITHUB_SHA::7}: $(git log -1 --pretty=%s | cut -c1-80)" \
+            --non-interactive
+        env:
+          CHANNEL: preview

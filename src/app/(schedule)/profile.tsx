@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { PUSH_SUPPORTED, useNotificationSettings, useNotificationStatus } from '@/hooks/use-push';
 import type { RegistrationStatus } from '@/hooks/use-push';
+import { useOta } from '@/hooks/use-ota';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -17,6 +18,7 @@ export default function ProfileScreen() {
   const [myTeacher] = useMyTeacher();
   const [notifications, setNotifications] = useNotificationSettings();
   const notificationStatus = useNotificationStatus();
+  const ota = useOta();
 
   /** Смена роли: если для новой роли нет данных — сразу к выбору */
   function pickRole(next: 'student' | 'teacher') {
@@ -162,6 +164,32 @@ export default function ProfileScreen() {
             </>
           )}
         </View>
+
+        {/* OTA-обновление JS-кода */}
+        {ota.status !== 'unavailable' && (
+          <Row
+            title={
+              ota.status === 'ready'
+                ? 'Доступно обновление'
+                : ota.status === 'checking' || ota.status === 'downloading'
+                  ? 'Проверка обновлений…'
+                  : 'Обновить приложение'
+            }
+            subtitle={
+              ota.status === 'ready'
+                ? 'Нажмите, чтобы перезапустить с новой версией'
+                : undefined
+            }
+            chevron={ota.status === 'ready'}
+            onPress={() => {
+              if (ota.status === 'ready') {
+                ota.restart();
+                return;
+              }
+              ota.check();
+            }}
+          />
+        )}
 
         <ThemedText type="small" themeColor="textSecondary" style={styles.hint}>
           Роль можно менять в любой момент — предыдущий выбор сохранится.

@@ -3,6 +3,12 @@
     "name": "Расписание ЧРТ",
     "slug": "chrt-tt",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e67f7cfa-9222-48d6-a643-425395ff8df9"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "chrttt",
@@ -28,6 +34,13 @@
     "plugins": [
       "expo-router",
       "./plugins/strip-storage-permissions",
+      [
+        "expo-updates",
+        {
+          "checkAutomatically": "ON_LOAD",
+          "fallbackToCacheTimeout": 0
+        }
+      ],
       [
         "expo-notifications",
         {
