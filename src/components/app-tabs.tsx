@@ -26,6 +26,11 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>Кабинеты</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="door.left.hand.open" md="meeting_room" />
       </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="(peek)">
+        <NativeTabs.Trigger.Label>Просмотр</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="eye" md="visibility" />
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }

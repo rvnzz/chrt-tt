@@ -21,6 +21,9 @@ export default function AppTabs() {
           <TabTrigger name="rooms" href="/rooms" asChild>
             <TabButton>Кабинеты</TabButton>
           </TabTrigger>
+          <TabTrigger name="peek" href="/(peek)" asChild>
+            <TabButton>Просмотр</TabButton>
+          </TabTrigger>
         </CustomTabList>
       </TabList>
     </Tabs>
