@@ -17,6 +17,8 @@
       "icon": "./assets/images/icon.png"
     },
     "android": {
+      "package": "com.rzzx.chrt",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
