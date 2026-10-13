@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "426118836459",
+    "project_id": "chrt-tt",
+    "storage_bucket": "chrt-tt.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426118836459:android:44ca7f4daf49a16d1f8eae",
+        "android_client_info": {
+          "package_name": "com.rzzx.chrt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjScfa11gbA4QoFom1Yosd9RxaXfI_zdo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
