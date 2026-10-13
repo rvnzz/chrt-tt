@@ -10,22 +10,23 @@ import { DayStrip } from '@/components/schedule/day-strip';
 import { PairCard } from '@/components/schedule/pair-card';
 import { WeekNav } from '@/components/schedule/week-nav';
 import { RoleFlow } from '@/components/onboarding/role-flow';
+import { SettingsIcon } from '@/components/settings-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useSelectedGroup } from '@/hooks/use-selected-group';
+import { usePreviewGroup } from '@/hooks/use-preview-group';
 import { useMyTeacher, useUserRole } from '@/hooks/use-user';
-import { useTheme } from '@/hooks/use-theme';
 import { useBell } from '@/hooks/use-bell';
 import { useWeek } from '@/hooks/use-week';
 import { todayISO, weekdayFull } from '@/utils/date';
 
 export default function ScheduleScreen() {
   const router = useRouter();
-  const theme = useTheme();
   const [role] = useUserRole();
   const [group] = useSelectedGroup();
   const [myTeacher] = useMyTeacher();
+  const [previewGroup, setPreviewGroup] = usePreviewGroup();
   const [anchor, setAnchor] = useState(todayISO());
   const week = useWeek(anchor);
   const bell = useBell(anchor);
@@ -44,13 +45,24 @@ export default function ScheduleScreen() {
     );
   }
 
-  const pairs = role === 'student' && week.data && group ? findGroupPairs(week.data, group, anchor) : [];
+  // «Подглядываемая» группа (не меняя свою)
+  const ownGroup = role === 'student' ? group : null;
+  const viewingGroup = previewGroup ?? ownGroup;
+  const isPreviewing =
+    previewGroup != null && (role === 'teacher' || previewGroup.id !== group!.id);
+
+  const pairs =
+    viewingGroup && week.data ? findGroupPairs(week.data, viewingGroup, anchor) : [];
   const teacherDays =
     role === 'teacher' && week.data && myTeacher ? collectTeacherWeek(week.data, myTeacher.id) : [];
   const myDay = teacherDays.find((day) => day.date === anchor);
   const selectedDay = week.data?.days.find((day) => day.date === anchor);
 
-  const title = role === 'teacher' ? myTeacher!.name : group!.name;
+  const title = isPreviewing && viewingGroup
+    ? viewingGroup.name
+    : role === 'teacher'
+      ? myTeacher!.name
+      : group!.name;
   const isTeacher = role === 'teacher';
 
   return (
@@ -61,10 +73,9 @@ export default function ScheduleScreen() {
           headerRight: () => (
             <Pressable
               onPress={() => router.push('/profile')}
+              hitSlop={10}
               style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedText type="smallBold" style={{ color: theme.text }}>
-                Сменить
-              </ThemedText>
+              <SettingsIcon />
             </Pressable>
           ),
         }}
@@ -77,6 +88,27 @@ export default function ScheduleScreen() {
         refreshControl={
           <RefreshControl refreshing={week.isFetching && week.data != null} onRefresh={() => week.refetch()} />
         }>
+        {/* Режим «подглядывания» */}
+        {isPreviewing && previewGroup && (
+          <ThemedView type="backgroundElement" style={styles.previewBanner}>
+            <View style={styles.previewText}>
+              <ThemedText type="small" selectable>
+                Вы смотрите {previewGroup.name}
+                {ownGroup ? ` (ваша — ${ownGroup.name})` : ''}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Уведомления по-прежнему на вашу группу
+              </ThemedText>
+            </View>
+            <Pressable
+              onPress={() => setPreviewGroup(null)}
+              hitSlop={6}
+              style={({ pressed }) => [styles.pressed, styles.returnButton]}>
+              <ThemedText type="smallBold">Вернуться</ThemedText>
+            </Pressable>
+          </ThemedView>
+        )}
+
         <WeekNav date={anchor} onChange={setAnchor} week={week.data} />
 
         {/* Выбор дня */}
@@ -107,7 +139,7 @@ export default function ScheduleScreen() {
               actionLabel="Повторить"
               onAction={() => week.refetch()}
             />
-          ) : !isTeacher ? (
+          ) : !isTeacher || isPreviewing ? (
             pairs.length > 0 ? (
             pairs.map((pair) => (
               <PairCard key={pair.number} pair={pair} time={pairTimes.get(pair.number)} />
@@ -162,6 +194,21 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: Spacing.two,
+  },
+  previewBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    padding: Spacing.two,
+    borderRadius: 12,
+    borderCurve: 'continuous',
+  },
+  previewText: {
+    flex: 1,
+  },
+  returnButton: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
   },
   pressed: {
     opacity: 0.6,

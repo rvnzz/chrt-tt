@@ -67,7 +67,7 @@ export default function RoomScreen() {
               </ThemedText>
               <View style={styles.list}>
                 {day.items.map((assignment, index) => (
-                  <AssignmentCard key={`${assignment.pair_number}-${index}`} assignment={assignment} />
+                  <AssignmentCard key={`${assignment.pair_number}-${index}`} assignment={assignment} mode="room" />
                 ))}
               </View>
             </View>

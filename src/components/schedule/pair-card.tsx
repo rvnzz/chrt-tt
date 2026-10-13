@@ -23,9 +23,14 @@ export function PairCard({ pair, time }: PairCardProps) {
           {pair.number}
         </ThemedText>
         {time && (
-          <ThemedText type="small" themeColor="textSecondary" style={styles.timeText}>
-            {time.start}
-          </ThemedText>
+          <View style={styles.timeCol}>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.timeText}>
+              {time.start}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.timeText}>
+              {time.end}
+            </ThemedText>
+          </View>
         )}
       </View>
 
@@ -72,16 +77,19 @@ const styles = StyleSheet.create({
     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
   },
   numberBadge: {
-    width: 44,
+    width: 52,
     alignItems: 'center',
     justifyContent: 'center',
   },
   numberText: {
     fontVariant: ['tabular-nums'],
   },
+  timeCol: {
+    alignItems: 'center',
+  },
   timeText: {
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 13,
     fontVariant: ['tabular-nums'],
   },
   content: {

@@ -7,10 +7,17 @@ import { Spacing } from '@/constants/theme';
 
 type AssignmentCardProps = {
   assignment: Assignment;
+  /** В разрезе кабинета показываем преподавателя, в разрезе преподавателя — кабинет (не дублируем заголовок) */
+  mode?: 'teacher' | 'room';
 };
 
 /** Карточка пары в разрезе преподавателя/аудитории */
-export function AssignmentCard({ assignment }: AssignmentCardProps) {
+export function AssignmentCard({ assignment, mode = 'teacher' }: AssignmentCardProps) {
+  const suffix =
+    mode === 'room'
+      ? assignment.teacher // в кабинете кабинет уже в заголовке
+      : `ауд. ${assignment.room}`; // у преподавателя кабинет в заголовке отсутствует
+
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
       <ThemedText type="smallBold" themeColor="textSecondary" style={styles.pairNumber}>
@@ -23,7 +30,7 @@ export function AssignmentCard({ assignment }: AssignmentCardProps) {
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" selectable numberOfLines={1}>
           {assignment.group_name}
-          {assignment.subgroup ? ` (${assignment.subgroup} подгр.)` : ''} · ауд. {assignment.room}
+          {assignment.subgroup ? ` (${assignment.subgroup} подгр.)` : ''} · {suffix}
         </ThemedText>
       </View>
     </ThemedView>

@@ -10,7 +10,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useWeek } from '@/hooks/use-week';
 import { todayISO } from '@/utils/date';
 
-type GroupOption = ReturnType<typeof collectGroups>[number];
+export type GroupOption = ReturnType<typeof collectGroups>[number];
 
 type GroupPickerListProps = {
   selectedId?: number;

@@ -64,6 +64,13 @@ export default function ProfileScreen() {
         </View>
 
         {/* Смена данных роли */}
+        {/* Подглядел другого — не меняя своей роли и своей группы */}
+        <Row
+          title="Посмотреть другую группу"
+          chevron
+          onPress={() => router.push({ pathname: '/groups', params: { preview: '1' } })}
+        />
+
         {role === 'student' ? (
           <Row
             title="Сменить группу"

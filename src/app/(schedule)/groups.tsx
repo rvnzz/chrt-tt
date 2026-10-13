@@ -1,20 +1,35 @@
-import { useRouter } from 'expo-router';
+import {
+  GroupOption,
+  GroupPickerList,
+} from '@/components/schedule/group-picker-list';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
-import { GroupPickerList } from '@/components/schedule/group-picker-list';
 import { ThemedView } from '@/components/themed-view';
 import { useSelectedGroup } from '@/hooks/use-selected-group';
+import { usePreviewGroup } from '@/hooks/use-preview-group';
 
 export default function GroupsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ preview?: string }>();
+  const previewMode = params.preview === '1';
   const [, setGroup] = useSelectedGroup();
+  const [preview, setPreview] = usePreviewGroup();
+
+  function pick(group: GroupOption) {
+    if (previewMode) {
+      setPreview(group);
+    } else {
+      setGroup(group);
+    }
+    router.back();
+  }
 
   return (
     <ThemedView style={{ flex: 1 }}>
+      <Stack.Screen options={{ title: previewMode ? 'Посмотреть группу' : 'Выбор группы' }} />
       <GroupPickerList
-        onSelect={(group) => {
-          setGroup(group);
-          router.back();
-        }}
+        selectedId={previewMode ? preview?.id : undefined}
+        onSelect={pick}
       />
     </ThemedView>
   );
