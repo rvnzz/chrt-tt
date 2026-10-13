@@ -16,11 +16,16 @@ const BLOCKED = ['READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE'].map(
 
 const stripStoragePermissions: ConfigPlugin = (config) =>
   withAndroidManifest(config, (mod) => {
-    const manifest = mod.modResults.manifest;
-    manifest.$ = { ...manifest.$, 'xmlns:tools': 'http://schemas.android.com/tools' };
+    const manifestBody = mod.modResults.manifest;
+    manifestBody.$ = { ...manifestBody.$, 'xmlns:tools': 'http://schemas.android.com/tools' };
 
-    manifest['uses-permission'] = [
-      ...(manifest['uses-permission'] ?? []),
+    // 1) убираем существующие объявления этих разрешений,
+    // 2) добавляем единственную директиву tools:node="remove" на каждое имя —
+    //    merge учтёт её и не позволит библиотекам добавить их в итоговый манифест
+    manifestBody['uses-permission'] = [
+      ...(manifestBody['uses-permission'] ?? []).filter(
+        (entry) => !BLOCKED.includes(entry.$['android:name'] ?? ''),
+      ),
       ...BLOCKED.map((name) => ({
         $: {
           'android:name': name,
