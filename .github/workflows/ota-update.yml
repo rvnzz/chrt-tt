@@ -1,0 +1,43 @@
+name: ota-update
+
+# Ручная публикация JS-обновления (EAS Update) без нативной сборки.
+# Работает для устройств с билдом той же runtimeVersion (versionName).
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Канал обновления'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+      message:
+        description: 'Что изменилось (покажется в списке обновлений)'
+        required: true
+        default: 'обновление JS-кода'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish OTA
+        run: |
+          npx eas-cli update \
+            --channel "${{ inputs.channel }}" \
+            --message "${{ inputs.message }}" \
+            --non-interactive

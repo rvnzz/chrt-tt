@@ -1,8 +1,11 @@
 name: eas-build
 
+# Ручная сборка (Actions → Run workflow):
+#   - preview     : APK (автоключ EAS)
+#   - production  : AAB (свой upload-keystore)
+# Автосборки убраны: Android-билды происходят только по тегам (release.yml).
+
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       profile:
@@ -11,56 +14,37 @@ on:
         default: 'preview'
         type: choice
         options:
-          - preview   # APK, подпись автоключом EAS
-          - production # AAB, подпись своим upload-keystore
+          - preview
+          - production
 
 env:
-  PROFILE: ${{ inputs.profile || 'preview' }}
+  PROFILE: ${{ inputs.profile }}
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      # Если HEAD-коммит помечен тегом — сюда ничего не собираем:
-      # это релиз, его делает release.yml по самому тегу (не строим дважды)
-      - name: Пропуск релизных коммитов
-        id: tagcheck
-        run: |
-          if git describe --exact-match --tags >/dev/null 2>&1; then
-            echo "is_tag=true" >> "$GITHUB_OUTPUT"
-            echo "HEAD помечен тегом: $(git describe --exact-match --tags) — building by release.yml"
-          else
-            echo "is_tag=false" >> "$GITHUB_OUTPUT"
-          fi
 
       - uses: actions/setup-node@v4
-        if: ${{ github.event_name == 'workflow_dispatch' || steps.tagcheck.outputs.is_tag != 'true' }}
         with:
           node-version: 22
           cache: npm
 
       - uses: expo/expo-github-action@v8
-        if: ${{ github.event_name == 'workflow_dispatch' || steps.tagcheck.outputs.is_tag != 'true' }}
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Restore own keystore (production)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.profile == 'production' }}
+        if: ${{ env.PROFILE == 'production' }}
         run: |
           echo "${{ secrets.CREDENTIALS_JSON_B64 }}" | base64 -d > credentials.json
 
       - name: Install dependencies
-        if: ${{ github.event_name == 'workflow_dispatch' || steps.tagcheck.outputs.is_tag != 'true' }}
         run: npm ci
 
       - name: Build Android (${{ env.PROFILE }})
-        if: ${{ github.event_name == 'workflow_dispatch' || steps.tagcheck.outputs.is_tag != 'true' }}
         run: |
           npx eas-cli build \
             -p android \
@@ -70,13 +54,3 @@ jobs:
 
           echo "build_url=$(python3 -c 'import json; print(json.load(open("build.json"))[0]["buildUrl"])')" >> "$GITHUB_OUTPUT"
           echo " Artifact: $(python3 -c 'import json; print(json.load(open("build.json"))[0]["buildUrl"])')"
-
-      - name: Publish OTA update
-        if: ${{ steps.tagcheck.outputs.is_tag != 'true' }}
-        run: |
-          npx eas-cli update \
-            --channel "$CHANNEL" \
-            --message "GitHub ${GITHUB_SHA::7}: $(git log -1 --pretty=%s | cut -c1-80)" \
-            --non-interactive
-        env:
-          CHANNEL: preview
