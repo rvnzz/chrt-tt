@@ -1,0 +1,53 @@
+name: eas-build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS build profile (Android)'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview   # APK, подпись автоключом EAS
+          - production # AAB, подпись своим upload-keystore
+
+env:
+  PROFILE: ${{ inputs.profile || 'preview' }}
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Restore own keystore (production)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.profile == 'production' }}
+        run: |
+          echo "${{ secrets.CREDENTIALS_JSON_B64 }}" | base64 -d > credentials.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Android (${{ env.PROFILE }})
+        run: |
+          npx eas-cli build \
+            -p android \
+            --profile "$PROFILE" \
+            --non-interactive \
+            --json > build.json
+
+          echo "build_url=$(python3 -c 'import json; print(json.load(open("build.json"))[0]["buildUrl"])')" >> "$GITHUB_OUTPUT"
+          echo " Artifact: $(python3 -c 'import json; print(json.load(open("build.json"))[0]["buildUrl"])')"

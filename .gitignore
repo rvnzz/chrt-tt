@@ -41,3 +41,13 @@ example
 # generated native folders
 /ios
 /android
+
+# credentials (сборка через свои ключи)
+credentials.json
+*.jks
+*.keystore
+
+# артефакты локальных сборок
+builds/
+*.aab
+*.apks

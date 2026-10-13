@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "chrt-tt",
+    "name": "Расписание ЧРТ",
     "slug": "chrt-tt",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,16 +8,18 @@
     "scheme": "chrttt",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.rzzx.chrt",
+      "versionCode": 2
     },
     "web": {
       "output": "static",
@@ -25,6 +27,28 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/strip-storage-permissions",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#208AEF"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildArchs": [
+              "armeabi-v7a",
+              "arm64-v8a"
+            ],
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableBundleCompression": true
+          }
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -32,11 +56,20 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e67f7cfa-9222-48d6-a643-425395ff8df9"
+      }
+    },
+    "owner": "rzzxs-team"
   }
 }

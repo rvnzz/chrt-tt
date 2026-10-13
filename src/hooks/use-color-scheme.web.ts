@@ -1,21 +1,28 @@
-import { useEffect, useState } from 'react';
-import { useColorScheme as useRNColorScheme } from 'react-native';
+import { useSyncExternalStore } from 'react';
+import { useColorScheme as useRNColorScheme, ColorSchemeName } from 'react-native';
 
 /**
- * To support static rendering, this value needs to be re-calculated on the client side for web
+ * To support static rendering, this value needs to be re-calculated on the client side for web.
+ * «Гидратация» отслеживается без useEffect/setState — первый снапшот стабилен.
  */
-export function useColorScheme() {
-  const [hasHydrated, setHasHydrated] = useState(false);
+let hydrated = false;
+const hydrationListeners = new Set<() => void>();
+const subscribe = (cb: () => void) => {
+  hydrationListeners.add(cb);
+  queueMicrotask(() => {
+    hydrated = true;
+    cb();
+  });
 
-  useEffect(() => {
-    setHasHydrated(true);
-  }, []);
+  return () => hydrationListeners.delete(cb);
+};
 
-  const colorScheme = useRNColorScheme();
+export function useColorScheme(): NonNullable<ColorSchemeName> {
+  useSyncExternalStore(
+    subscribe,
+    () => hydrated,
+    () => false, // SSR: считаем негидратированным
+  );
 
-  if (hasHydrated) {
-    return colorScheme;
-  }
-
-  return 'light';
+  return useRNColorScheme() ?? 'light';
 }
