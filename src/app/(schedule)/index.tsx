@@ -18,8 +18,8 @@ import { useSelectedGroup } from '@/hooks/use-selected-group';
 import { usePreviewGroup } from '@/hooks/use-preview-group';
 import { useMyTeacher, useUserRole } from '@/hooks/use-user';
 import { useBell } from '@/hooks/use-bell';
+import { avoidSunday, todayISO, weekdayFull } from '@/utils/date';
 import { useWeek } from '@/hooks/use-week';
-import { todayISO, weekdayFull } from '@/utils/date';
 
 export default function ScheduleScreen() {
   const router = useRouter();
@@ -27,7 +27,8 @@ export default function ScheduleScreen() {
   const [group] = useSelectedGroup();
   const [myTeacher] = useMyTeacher();
   const [previewGroup, setPreviewGroup] = usePreviewGroup();
-  const [anchor, setAnchor] = useState(todayISO());
+  const [rawAnchor, setRawAnchor] = useState(todayISO());
+  const anchor = avoidSunday(rawAnchor);
   const week = useWeek(anchor);
   const bell = useBell(anchor);
   const pairTimes = pairTimeMap(bell.data);
@@ -109,11 +110,11 @@ export default function ScheduleScreen() {
           </ThemedView>
         )}
 
-        <WeekNav date={anchor} onChange={setAnchor} week={week.data} />
+        <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
 
         {/* Выбор дня */}
         {week.data ? (
-          <DayStrip days={collectDays(week.data)} selected={anchor} onSelect={setAnchor} />
+          <DayStrip days={collectDays(week.data)} selected={anchor} onSelect={setRawAnchor} />
         ) : (
           <View style={styles.stripSkeleton} />
         )}

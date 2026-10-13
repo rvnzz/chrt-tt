@@ -1,4 +1,5 @@
 import { AllWeekData, Assignment, DayRef, GroupRef, Pair } from '@/api/types';
+import { weekdayIndex } from '@/utils/date';
 import { SelectedGroup } from '@/hooks/use-selected-group';
 
 /** Пары группы в конкретный день (с содержимым), отсортированные по номеру */
@@ -154,7 +155,9 @@ export function collectRoomWeek(week: AllWeekData, roomName: string): DaySchedul
   return result.filter((d) => d.items.length > 0);
 }
 
-/** Список дней недели для панели выбора */
+/** Список дней недели для панели выбора (воскресенье не показываем) */
 export function collectDays(week: AllWeekData): DayRef[] {
-  return week.days.map((day) => ({ date: day.date, hasSchedule: day.has_schedule }));
+  return week.days
+    .filter((day) => weekdayIndex(day.date) !== 6) // воскресенье — не показываем
+    .map((day) => ({ date: day.date, hasSchedule: day.has_schedule }));
 }

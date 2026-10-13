@@ -56,6 +56,14 @@ export function dayNumber(iso: string): string {
   return String(parseISODate(iso).getDate());
 }
 
+/** Дата не воскресенье: если воскресенье — возвращаем субботу этой же недели */
+export function avoidSunday(iso: string): string {
+  if (weekdayIndex(iso) !== 6) {
+    return iso;
+  }
+  return addDaysISO(iso, -1);
+}
+
 /** «12 октября» (год опускаем, если он текущий) */
 export function formatDate(iso: string): string {
   const date = parseISODate(iso);

@@ -1,7 +1,7 @@
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useState, type ReactNode } from 'react';
 
-import { findGroupPairs } from '@/api/derive';
+import { collectDays, findGroupPairs } from '@/api/derive';
 import { pairTimeMap } from '@/api/bells';
 import { DayStrip } from '@/components/schedule/day-strip';
 import { PairCard } from '@/components/schedule/pair-card';
@@ -12,7 +12,7 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { SelectedGroup } from '@/hooks/use-selected-group';
 import { useBell } from '@/hooks/use-bell';
 import { useWeek } from '@/hooks/use-week';
-import { todayISO, weekdayFull } from '@/utils/date';
+import { avoidSunday, todayISO, weekdayFull } from '@/utils/date';
 
 type Props = {
   group: SelectedGroup;
@@ -20,9 +20,10 @@ type Props = {
   banner?: ReactNode;
 };
 
-/** Дневное расписание группы: недели, дни, карточки пар со звонками. */
+/** Дневное расписание группы: неделя, дни (без воскресений), карточки пар со звонками. */
 export function ScheduleDayView({ group, banner }: Props) {
-  const [anchor, setAnchor] = useState(todayISO());
+  const [rawAnchor, setRawAnchor] = useState(todayISO());
+  const anchor = avoidSunday(rawAnchor);
   const week = useWeek(anchor);
   const bell = useBell(anchor);
   const pairTimes = pairTimeMap(bell.data);
@@ -40,11 +41,11 @@ export function ScheduleDayView({ group, banner }: Props) {
       }>
       {banner}
 
-      <WeekNav date={anchor} onChange={setAnchor} week={week.data} />
+      <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
 
       {/* Выбор дня */}
       {week.data ? (
-        <DayStrip days={collectDaysSafe(week.data)} selected={anchor} onSelect={setAnchor} />
+        <DayStrip days={collectDays(week.data)} selected={anchor} onSelect={setRawAnchor} />
       ) : (
         <View style={styles.stripSkeleton} />
       )}
@@ -92,10 +93,6 @@ export function ScheduleDayView({ group, banner }: Props) {
   );
 }
 
-function collectDaysSafe(week: { days: { date: string; has_schedule: boolean }[] }) {
-  return week.days.map((day) => ({ date: day.date, hasSchedule: day.has_schedule }));
-}
-
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
@@ -108,7 +105,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.three,
     gap: Spacing.three,
-    paddingBottom: Spacing.four + BottomTabInset,
+    paddingBottom: BottomTabInset + Spacing.four,
   },
   stripSkeleton: {
     height: 72,
