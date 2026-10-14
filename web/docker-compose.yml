@@ -1,0 +1,19 @@
+# Веб-версия «Расписание ЧРТ» (статика + прокси API)
+#
+# Строит образ из корня репозитория (web/Dockerfile).
+# На VPS: не забудьте .env с WEB_PUSH_BACKEND — адрес pushtt HTTP-порта.
+
+services:
+  web:
+    image: ghcr.io/rvnzz/chrt-tt-web:latest
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+    restart: unless-stopped
+    environment:
+      WEB_PUSH_BACKEND: ${WEB_PUSH_BACKEND:-http://host.docker.internal:4000}
+      TIMET_UPSTREAM: ${TIMET_UPSTREAM:-https://timet.eremin.tech}
+    ports:
+      - '${WEB_PORT:-8080}:80'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'

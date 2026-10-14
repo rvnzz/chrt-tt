@@ -1,0 +1,42 @@
+# nginx templating: envsubst заменит ${WEB_PUSH_BACKEND} на адрес pushtt.
+# timet.eremin.tech — литеральный upstream (резолвится при старте nginx).
+
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # gzip
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    # Прокси: данные расписания (same-origin для web-приложения)
+    location /timet/ {
+        proxy_pass https://timet.eremin.tech;
+        proxy_ssl_server_name on;
+        proxy_set_header Host timet.eremin.tech;
+        rewrite ^/timet/(.*)$ /$1 break;
+    }
+
+    # Прокси: pushtt-воркер (регистрация пушей, звонки)
+    # Значение приходит из env (WEB_PUSH_BACKEND), напр. http://host.docker.internal:4000,
+    # поэтому резолв идёт при старте через /etc/hosts (compose: extra_hosts host-gateway)
+    location /push-api/ {
+        proxy_pass ${WEB_PUSH_BACKEND};
+        proxy_set_header Host $host;
+        rewrite ^/push-api/(.*)$ /$1 break;
+    }
+
+    # Статика expo: долгий кеш ассетов
+    location /_expo/ {
+        add_header Cache-Control "public, immutable, max-age=31536000";
+        try_files $uri =404;
+    }
+
+    # SPA fallback: несуществующие маршруты → / (expo-router сам решит)
+    location / {
+        try_files $uri $uri.html /index.html;
+    }
+}

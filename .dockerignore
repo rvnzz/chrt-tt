@@ -1,0 +1,9 @@
+node_modules/
+dist/
+builds/
+android/
+ios/
+.git/
+.env
+*.aab
+*.apks
