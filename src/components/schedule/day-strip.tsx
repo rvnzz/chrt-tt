@@ -78,6 +78,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     padding: Spacing.two,
     gap: Spacing.one,
     alignItems: 'center',
