@@ -1,94 +1,87 @@
-import { Tabs, TabList, TabSlot, TabTrigger, TabTriggerSlotProps, TabListProps } from 'expo-router/ui';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import {
+  Tabs,
+  TabList,
+  TabSlot,
+  TabTrigger,
+  type TabTriggerSlotProps,
+} from 'expo-router/ui';
+import { SymbolView } from 'expo-symbols';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
+import { Spacing } from '@/constants/theme';
 
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { ThemedText } from '@/components/themed-text';
+import { useTheme } from '@/hooks/use-theme';
 
+const TABS = [
+  { href: '/', icon: { ios: 'calendar', web: 'calendar_month' }, label: 'Расписание' },
+  { href: '/teachers', icon: { ios: 'person.2', web: 'groups' }, label: 'Преподаватели' },
+  { href: '/rooms', icon: { ios: 'door.left.hand.open', web: 'meeting_room' }, label: 'Кабинеты' },
+  { href: '/peek', icon: { ios: 'person.2.gobackward', web: 'switch_account' }, label: 'Группы' },
+  { href: '/profile', icon: { ios: 'gearshape', web: 'settings' }, label: 'Настройки' },
+] as const;
+
+/** Web-табы в стиле мобилки: нижняя панель с иконками (без бренд-плашки). */
 export default function AppTabs() {
+  const theme = useTheme();
+
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
-        <CustomTabList>
-          <TabTrigger name="schedule" href="/" asChild>
-            <TabButton>Расписание</TabButton>
-          </TabTrigger>
-          <TabTrigger name="teachers" href="/teachers" asChild>
-            <TabButton>Преподаватели</TabButton>
-          </TabTrigger>
-          <TabTrigger name="rooms" href="/rooms" asChild>
-            <TabButton>Кабинеты</TabButton>
-          </TabTrigger>
-          <TabTrigger name="peek" href="/peek" asChild>
-            <TabButton>Группы</TabButton>
-          </TabTrigger>
-        </CustomTabList>
+        <View style={[styles.tabBar, { backgroundColor: theme.background, borderTopColor: theme.backgroundElement }]}>
+          {TABS.map((tab) => (
+            <TabTrigger key={tab.href} name={tab.label} href={tab.href} asChild>
+              <TabButton icon={tab.icon} label={tab.label} />
+            </TabTrigger>
+          ))}
+        </View>
       </TabList>
     </Tabs>
   );
 }
 
-export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+function TabButton({
+  icon,
+  label,
+  isFocused,
+  ...props
+}: TabTriggerSlotProps & { icon: (typeof TABS)[number]['icon']; label: string }) {
+  const theme = useTheme();
+
   return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
-        style={styles.tabButtonView}>
-        <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
-          {children}
-        </ThemedText>
-      </ThemedView>
+    <Pressable
+      {...props}
+      style={({ pressed }) => [styles.tabButton, pressed && { opacity: 0.6 }]}>
+      <SymbolView
+        size={22}
+        tintColor={isFocused ? theme.text : theme.textSecondary}
+        name={icon}
+      />
+      <ThemedText
+        type="small"
+        themeColor={isFocused ? 'text' : 'textSecondary'}
+        style={styles.tabLabel}>
+        {label}
+      </ThemedText>
     </Pressable>
   );
 }
 
-export function CustomTabList(props: TabListProps) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-
-  return (
-    <View {...props} style={[styles.tabListContainer, { backgroundColor: colors.background }]}>
-      <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          Расписание ЧРТ
-        </ThemedText>
-
-        {props.children}
-      </ThemedView>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  tabListContainer: {
-    position: 'absolute',
-    width: '100%',
-    padding: Spacing.three,
+  tabBar: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  innerContainer: {
+    gap: 2,
     paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-    borderRadius: Spacing.five,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexGrow: 1,
-    gap: Spacing.two,
-    maxWidth: MaxContentWidth,
   },
-  brandText: {
-    marginRight: 'auto',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  tabButtonView: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
+  tabLabel: {
+    fontSize: 10,
+    lineHeight: 12,
   },
 });
