@@ -14,7 +14,8 @@
     "scheme": "chrttt",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.rzzx.chrt"
     },
     "android": {
       "package": "com.rzzx.chrt",
