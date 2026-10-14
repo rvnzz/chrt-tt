@@ -1,37 +1,31 @@
 import { Stack, useRouter } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { collectDays, collectTeacherWeek, findGroupPairs } from '@/api/derive';
+import { collectTeacherWeek } from '@/api/derive';
 import { pairTimeMap } from '@/api/bells';
-import { EmptyState, PairSkeleton } from '@/components/schedule/states';
 import { AssignmentCard } from '@/components/schedule/assignment-card';
-import { DayStrip } from '@/components/schedule/day-strip';
-import { PairCard } from '@/components/schedule/pair-card';
-import { WeekNav } from '@/components/schedule/week-nav';
-import { RoleFlow } from '@/components/onboarding/role-flow';
+import { EmptyState, PairSkeleton } from '@/components/schedule/states';
 import { SettingsIcon } from '@/components/settings-icon';
+import { RoleFlow } from '@/components/onboarding/role-flow';
+import { ScheduleDayView } from '@/components/schedule/schedule-day-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useSelectedGroup } from '@/hooks/use-selected-group';
-import { usePreviewGroup } from '@/hooks/use-preview-group';
 import { useMyTeacher, useUserRole } from '@/hooks/use-user';
-import { useBell } from '@/hooks/use-bell';
-import { avoidSunday, todayISO, weekdayFull } from '@/utils/date';
+import { useBellMap } from '@/hooks/use-bells';
 import { useWeek } from '@/hooks/use-week';
+import { avoidSunday, formatDate, todayISO, weekdayFull } from '@/utils/date';
 
 export default function ScheduleScreen() {
   const router = useRouter();
   const [role] = useUserRole();
   const [group] = useSelectedGroup();
   const [myTeacher] = useMyTeacher();
-  const [previewGroup, setPreviewGroup] = usePreviewGroup();
   const [rawAnchor, setRawAnchor] = useState(todayISO());
   const anchor = avoidSunday(rawAnchor);
   const week = useWeek(anchor);
-  const bell = useBell(anchor);
-  const pairTimes = pairTimeMap(bell.data);
 
   // Встроенный онбординг: без Redirect и навигации между роутами
   const profileComplete =
@@ -46,128 +40,129 @@ export default function ScheduleScreen() {
     );
   }
 
-  // «Подглядываемая» группа (не меняя свою)
-  const ownGroup = role === 'student' ? group : null;
-  const viewingGroup = previewGroup ?? ownGroup;
-  const isPreviewing =
-    previewGroup != null && (role === 'teacher' || previewGroup.id !== group!.id);
-
-  const pairs =
-    viewingGroup && week.data ? findGroupPairs(week.data, viewingGroup, anchor) : [];
-  const teacherDays =
-    role === 'teacher' && week.data && myTeacher ? collectTeacherWeek(week.data, myTeacher.id) : [];
-  const myDay = teacherDays.find((day) => day.date === anchor);
-  const selectedDay = week.data?.days.find((day) => day.date === anchor);
-
-  const title = isPreviewing && viewingGroup
-    ? viewingGroup.name
-    : role === 'teacher'
-      ? myTeacher!.name
-      : group!.name;
+  // Просмотр чужих групп живёт только в табе «Просмотр»
   const isTeacher = role === 'teacher';
 
   return (
     <ThemedView style={styles.flex}>
-      <Stack.Screen
-        options={{
-          title,
-          headerRight: () => (
-            <Pressable
-              onPress={() => router.push('/profile')}
-              hitSlop={10}
-              style={({ pressed }) => pressed && styles.pressed}>
-              <SettingsIcon />
-            </Pressable>
-          ),
-        }}
-      />
+      {isTeacher ? (
+        <Stack.Screen
+          options={{
+            title: myTeacher!.name,
+            headerRight: () => (
+              <Pressable
+                onPress={() => router.push('/profile')}
+                hitSlop={10}
+                style={({ pressed }) => pressed && styles.pressed}>
+                <SettingsIcon />
+              </Pressable>
+            ),
+          }}
+        />
+      ) : (
+        <Stack.Screen
+          options={{
+            title: group!.name,
+            headerRight: () => (
+              <Pressable
+                onPress={() => router.push('/profile')}
+                hitSlop={10}
+                style={({ pressed }) => pressed && styles.pressed}>
+                <SettingsIcon />
+              </Pressable>
+            ),
+          }}
+        />
+      )}
 
-      <ScrollView
-        style={styles.flex}
-        contentContainerStyle={[styles.scrollContent, styles.contentWidth]}
-        contentInsetAdjustmentBehavior="automatic"
-        refreshControl={
-          <RefreshControl refreshing={week.isFetching && week.data != null} onRefresh={() => week.refetch()} />
-        }>
-        {/* Режим «подглядывания» */}
-        {isPreviewing && previewGroup && (
-          <ThemedView type="backgroundElement" style={styles.previewBanner}>
-            <View style={styles.previewText}>
-              <ThemedText type="small" selectable>
-                Вы смотрите {previewGroup.name}
-                {ownGroup ? ` (ваша — ${ownGroup.name})` : ''}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Уведомления по-прежнему на вашу группу
-              </ThemedText>
-            </View>
-            <Pressable
-              onPress={() => setPreviewGroup(null)}
-              hitSlop={6}
-              style={({ pressed }) => [styles.pressed, styles.returnButton]}>
-              <ThemedText type="smallBold">Вернуться</ThemedText>
-            </Pressable>
-          </ThemedView>
-        )}
-
-        <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
-
-        {/* Выбор дня */}
-        {week.data ? (
-          <DayStrip days={collectDays(week.data)} selected={anchor} onSelect={setRawAnchor} />
-        ) : (
-          <View style={styles.stripSkeleton} />
-        )}
-
-        {/* Дата выбранного дня */}
-        <ThemedText type="small" themeColor="textSecondary" style={styles.dayHeader}>
-          {weekdayFull(anchor)}
-        </ThemedText>
-
-        {/* Содержимое дня */}
-        <View style={styles.list}>
-          {week.isLoading ? (
-            <>
-              <PairSkeleton />
-              <PairSkeleton />
-              <PairSkeleton />
-            </>
-          ) : week.isError ? (
-            <EmptyState
-              emoji="📡"
-              title="Не удалось загрузить расписание"
-              description="Проверьте подключение к сети и попробуйте снова."
-              actionLabel="Повторить"
-              onAction={() => week.refetch()}
-            />
-          ) : !isTeacher || isPreviewing ? (
-            pairs.length > 0 ? (
-            pairs.map((pair) => (
-              <PairCard key={pair.number} pair={pair} time={pairTimes.get(pair.number)} />
-            ))
-            ) : (
-              <EmptyState
-                emoji="☕"
-                title="Занятий нет"
-                description={
-                  selectedDay === undefined
-                    ? 'День вне диапазона этой недели.'
-                    : selectedDay.has_schedule
-                      ? 'В этот день пар для группы не запланировано.'
-                      : 'Расписание на этот день не опубликовано.'
-                }
-              />
-            )
-          ) : myDay && myDay.items.length > 0 ? (
-            myDay.items.map((assignment, index) => (
-              <AssignmentCard key={`${assignment.pair_number}-${index}`} assignment={assignment} time={pairTimes.get(assignment.pair_number)} />
-            ))
-          ) : (
-            <EmptyState emoji="☕" title="Занятий нет" description="В этот день ваших пар не запланировано." />
-          )}
-        </View>
-      </ScrollView>
+      {isTeacher ? (
+        <TeacherDay
+          anchor={anchor}
+          rawAnchor={rawAnchor}
+          onAnchorChange={setRawAnchor}
+          teacherId={myTeacher!.id}
+          teacherName={myTeacher!.name}
+          week={week}
+        />
+      ) : (
+        <ScheduleDayView group={group!} />
+      )}
     </ThemedView>
+  );
+}
+
+/** Дневное расписание преподавателя (руки остаются в компоненте ScheduleDayView, здесь — варианты кард) */
+type TeacherDayProps = {
+  anchor: string;
+  rawAnchor: string;
+  onAnchorChange: (nextISO: string) => void;
+  teacherId: number;
+  teacherName: string;
+  week: {
+    isFetching: boolean;
+    isLoading: boolean;
+    isError: boolean;
+    refetch: () => void;
+    data: any;
+  };
+};
+
+export function TeacherDay({
+  rawAnchor,
+  onAnchorChange,
+  teacherId,
+  teacherName,
+  week,
+}: TeacherDayProps) {
+  const days = useMemo(
+    () => (week.data ? collectTeacherWeek(week.data, teacherId) : []),
+    [week.data, teacherId],
+  );
+  const bellMap = useBellMap(days.map((day) => day.date));
+  void rawAnchor;
+
+  return (
+    <ScrollView
+      style={styles.flex}
+      contentContainerStyle={[styles.scrollContent, styles.contentWidth]}
+      contentInsetAdjustmentBehavior="automatic"
+      refreshControl={
+        <RefreshControl refreshing={week.isFetching && week.data != null} onRefresh={() => week.refetch()} />
+      }>
+      {week.isLoading ? (
+        <View style={styles.list}>
+          <PairSkeleton />
+          <PairSkeleton />
+          <PairSkeleton />
+        </View>
+      ) : week.isError ? (
+        <EmptyState
+          emoji="📡"
+          title="Не удалось загрузить расписание"
+          actionLabel="Повторить"
+          onAction={() => week.refetch()}
+        />
+      ) : days.length === 0 ? (
+        <EmptyState emoji="☕" title="На этой неделе пар нет" />
+      ) : (
+        days.map((day) => (
+          <View key={day.date} style={styles.daySection}>
+            <ThemedText type="smallBold" themeColor="textSecondary" style={styles.dayHeader}>
+              {weekdayFull(day.date)}, {formatDate(day.date)}
+            </ThemedText>
+            <View style={styles.list}>
+              {day.items.map((assignment, index) => (
+                <AssignmentCard
+                  key={`${assignment.pair_number}-${index}`}
+                  assignment={assignment}
+                  time={pairTimeMap(bellMap.get(day.date)).get(assignment.pair_number)}
+                />
+              ))}
+            </View>
+          </View>
+        ))
+      )}
+    </ScrollView>
   );
 }
 
@@ -182,16 +177,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.three,
-    gap: Spacing.three,
+    gap: Spacing.four,
     paddingBottom: BottomTabInset + Spacing.four,
   },
-  stripSkeleton: {
-    height: 72,
-    borderRadius: 16,
-    borderCurve: 'continuous',
+  daySection: {
+    gap: Spacing.two,
   },
   dayHeader: {
-    marginTop: Spacing.one,
+    marginLeft: Spacing.one,
   },
   list: {
     gap: Spacing.two,
