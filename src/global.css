@@ -7,3 +7,11 @@
   --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
 }
+
+/* Web: форсированная тёмная тема — фон с первой отрисовки (до гидратации JS) */
+html,
+body {
+  background-color: #121417;
+  color: #ffffff;
+  color-scheme: dark;
+}
