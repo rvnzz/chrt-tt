@@ -1,5 +1,11 @@
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { useState, type ReactNode } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { type ReactNode, useState } from 'react';
+import {
+  Gesture,
+  GestureDetector,
+  Pressable,
+} from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 
 import { collectDays, collectGroupWeek, findGroupPairs } from '@/api/derive';
 import { pairTimeMap } from '@/api/bells';
@@ -13,14 +19,7 @@ import { SelectedGroup } from '@/hooks/use-selected-group';
 import { useTheme } from '@/hooks/use-theme';
 import { useBellMap } from '@/hooks/use-bells';
 import { useWeek } from '@/hooks/use-week';
-import {
-  avoidSunday,
-  formatDate,
-  formatRange,
-  todayISO,
-  weekdayFull,
-  weekdayShort,
-} from '@/utils/date';
+import { avoidSunday, formatDate, todayISO, weekdayFull } from '@/utils/date';
 
 type Props = {
   group: SelectedGroup;
@@ -31,14 +30,15 @@ type Props = {
 type Mode = 'day' | 'week';
 
 /**
- * Расписание группы: переключатель «День / Неделя»,
- * карточки пар со звонками, навигация по неделям (без воскресений).
+ * Расписание группы по дням. Свайп по «ручке»: вверх — неделя, вниз — день.
+ * В режиме «неделя» — секции по дням.
  */
 export function ScheduleDayView({ group, banner }: Props) {
   const [mode, setMode] = useState<Mode>('day');
   const [rawAnchor, setRawAnchor] = useState(todayISO());
   const anchor = avoidSunday(rawAnchor);
   const week = useWeek(anchor);
+  const theme = useTheme();
 
   const weekDays = week.data ? collectDays(week.data) : [];
   const bellMap = useBellMap(weekDays.map((day) => day.date));
@@ -47,9 +47,38 @@ export function ScheduleDayView({ group, banner }: Props) {
   const weekPairs = week.data ? collectGroupWeek(week.data, group) : [];
   const selectedDay = week.data?.days.find((day) => day.date === anchor);
 
+  // Внешний ScrollView блокируется на время жеста (иначе они конфликтуют)
+  const [outerScrollEnabled, setOuterScrollEnabled] = useState(true);
+
+  const handleEnd = (translationY: number) => {
+    setOuterScrollEnabled(true);
+    if (translationY > 30 && mode === 'day') {
+      setMode('week');
+    } else if (translationY < -30 && mode === 'week') {
+      setMode('day');
+    }
+  };
+
+  const pan = Gesture.Pan()
+    .activeOffsetY([-16, 16])
+    .failOffsetX([-24, 24])
+    .onStart(() => {
+      'worklet';
+      runOnJS(setOuterScrollEnabled)(false);
+    })
+    .onEnd((event: { translationY: number }) => {
+      'worklet';
+      runOnJS(handleEnd)(event.translationY);
+    });
+
+  const toggle = () => {
+    setMode(mode === 'day' ? 'week' : 'day');
+  };
+
   return (
     <ScrollView
       style={styles.flex}
+      scrollEnabled={outerScrollEnabled}
       contentContainerStyle={[styles.scrollContent, styles.contentWidth]}
       contentInsetAdjustmentBehavior="automatic"
       refreshControl={
@@ -59,22 +88,15 @@ export function ScheduleDayView({ group, banner }: Props) {
 
       <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
 
-      {/* День / Неделя */}
-      <View style={styles.modeRow}>
-        <ModeChip
-          label="День"
-          sub={week.data ? weekdayShort(anchor) : ''}
-          active={mode === 'day'}
-          onPress={() => setMode('day')}
-        />
-        <ModeChip
-          label="Неделя"
-          sub={week.data ? formatRange(week.data.week_start, week.data.week_end) : ''}
-          active={mode === 'week'}
-          onPress={() => setMode('week')}
-        />
-      </View>
-
+      {/* Ручка «день/неделя»: свайп вверх/вниз или тап */}
+      <GestureDetector gesture={pan}>
+        <Pressable onPress={toggle} style={styles.handle}>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.handleHint}>
+            {mode === 'day' ? '▼ неделя' : '▲ по дням'}
+          </ThemedText>
+          <View style={[styles.handleBar, { backgroundColor: theme.textSecondary }]} />
+        </Pressable>
+      </GestureDetector>
       {week.isLoading ? (
         <>
           <PairSkeleton />
@@ -155,46 +177,6 @@ export function ScheduleDayView({ group, banner }: Props) {
   );
 }
 
-/** Чип-переключатель «День / Неделя» */
-function ModeChip({
-  label,
-  sub,
-  active,
-  onPress,
-}: {
-  label: string;
-  sub: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
-      <View
-        style={[
-          styles.modeChip,
-          {
-            borderColor: active ? theme.text : theme.textSecondary,
-          },
-        ]}>
-        <View style={styles.modeChipText}>
-          <ThemedText
-            type={active ? 'smallBold' : 'small'}
-            themeColor={active ? 'text' : 'textSecondary'}>
-            {label}
-          </ThemedText>
-          {sub ? (
-            <ThemedText type="small" themeColor={active ? 'text' : 'textSecondary'}>
-              {active ? sub : ''}
-            </ThemedText>
-          ) : null}
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
@@ -209,21 +191,19 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.four,
   },
-  modeRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  modeChip: {
-    flex: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    borderCurve: 'continuous',
-    paddingVertical: Spacing.one + 2,
-    paddingHorizontal: Spacing.two,
+  handle: {
     alignItems: 'center',
+    gap: 2,
+    paddingVertical: Spacing.one,
   },
-  modeChipText: {
-    alignItems: 'center',
+  handleHint: {
+    fontSize: 10,
+    lineHeight: 12,
+  },
+  handleBar: {
+    width: 44,
+    height: 4,
+    borderRadius: 2,
   },
   stripSkeleton: {
     height: 72,
@@ -236,7 +216,6 @@ const styles = StyleSheet.create({
   },
   weekSection: {
     gap: Spacing.two,
-    marginBottom: Spacing.two,
   },
   list: {
     gap: Spacing.two,
