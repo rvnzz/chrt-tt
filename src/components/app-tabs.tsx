@@ -28,8 +28,8 @@ export default function AppTabs() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(peek)">
-        <NativeTabs.Trigger.Label>Просмотр</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="eye" md="visibility" />
+        <NativeTabs.Trigger.Label>Группы</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="person.2.gobackward" md="switch_account" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

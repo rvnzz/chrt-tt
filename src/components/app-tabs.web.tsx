@@ -22,7 +22,7 @@ export default function AppTabs() {
             <TabButton>Кабинеты</TabButton>
           </TabTrigger>
           <TabTrigger name="peek" href="/peek" asChild>
-            <TabButton>Просмотр</TabButton>
+            <TabButton>Группы</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>
