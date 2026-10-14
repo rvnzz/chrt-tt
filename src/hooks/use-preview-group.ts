@@ -14,6 +14,7 @@ export function usePreviewGroup(): [SelectedGroup | null, (value: SelectedGroup 
   const value = useSyncExternalStore(
     (cb) => storage.subscribe(KEY, cb),
     () => storage.get(KEY, null as SelectedGroup | null),
+    () => null as SelectedGroup | null, // getServerSnapshot (web SSR)
   );
 
   return [value, (next) => storage.set(KEY, next)];

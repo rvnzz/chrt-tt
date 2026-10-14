@@ -29,7 +29,11 @@ export default function AppTabs() {
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
-        <View style={[styles.tabBar, { backgroundColor: theme.background, borderTopColor: theme.backgroundElement }]}>
+        <View
+          style={StyleSheet.flatten([
+            styles.tabBar,
+            { backgroundColor: theme.background, borderTopColor: theme.backgroundElement },
+          ])}>
           {TABS.map((tab) => (
             <TabTrigger key={tab.href} name={tab.label} href={tab.href} asChild>
               <TabButton icon={tab.icon} label={tab.label} />
@@ -52,7 +56,9 @@ function TabButton({
   return (
     <Pressable
       {...props}
-      style={({ pressed }) => [styles.tabButton, pressed && { opacity: 0.6 }]}>
+      style={({ pressed }) =>
+        StyleSheet.flatten([styles.tabButton, pressed && { opacity: 0.6 }])
+      }>
       <SymbolView
         size={22}
         tintColor={isFocused ? theme.text : theme.textSecondary}

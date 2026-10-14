@@ -16,6 +16,7 @@ export function useSelectedGroup(): [SelectedGroup | null, (group: SelectedGroup
   const value = useSyncExternalStore(
     (cb) => storage.subscribe(KEY, cb),
     () => storage.get(KEY, null as SelectedGroup | null),
+    () => null as SelectedGroup | null, // getServerSnapshot (web SSR)
   );
 
   return [value, (group) => storage.set(KEY, group)];

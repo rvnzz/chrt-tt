@@ -44,6 +44,7 @@ export function useNotificationSettings(): [
   const value = useSyncExternalStore(
     (cb) => storage.subscribe(SETTINGS_KEY, cb),
     () => storage.get(SETTINGS_KEY, DEFAULT_SETTINGS),
+    () => DEFAULT_SETTINGS, // getServerSnapshot (web SSR)
   );
 
   return [value, (next) => storage.set(SETTINGS_KEY, next)];
@@ -60,6 +61,7 @@ export function useNotificationStatus(): RegistrationStatus {
   return useSyncExternalStore(
     (cb) => storage.subscribe(STATUS_KEY, cb),
     () => storage.get(STATUS_KEY, { state: 'idle' } as RegistrationStatus),
+    () => ({ state: 'idle' } as RegistrationStatus), // getServerSnapshot (web SSR)
   );
 }
 
