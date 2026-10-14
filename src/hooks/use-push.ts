@@ -27,8 +27,6 @@ export type NotificationSettings = {
   enabled: boolean;
   /** Пуш «изменение расписания» */
   changesEnabled: boolean;
-  /** Час напоминания «расписание на завтра» (локальное время устройства), null — выключено */
-  tomorrowHour: number | null;
 };
 
 const SETTINGS_KEY = 'notifications.settings';
@@ -37,7 +35,6 @@ const LAST_TOKEN_KEY = 'notifications.lastToken';
 const DEFAULT_SETTINGS: NotificationSettings = {
   enabled: false,
   changesEnabled: true,
-  tomorrowHour: null,
 };
 
 export function useNotificationSettings(): [
@@ -156,7 +153,7 @@ export function usePushSync(): void {
           targetId: identity.targetId,
           targetLabel: identity.targetLabel,
           changesEnabled: settings.changesEnabled,
-          tomorrowHour: settings.tomorrowHour,
+          tomorrowHour: null,
           tzOffsetMinutes: new Date().getTimezoneOffset(),
         });
         if (cancelled) return;

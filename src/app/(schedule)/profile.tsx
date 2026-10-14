@@ -111,55 +111,20 @@ export default function ProfileScreen() {
               </ThemedView>
 
               {notifications.enabled && (
-                <>
-                  <ThemedView type="backgroundElement" style={styles.row}>
-                    <View style={styles.rowText}>
-                      <ThemedText type="default">Изменения расписания</ThemedText>
-                      <ThemedText type="small" themeColor="textSecondary">
-                        Сразу при изменении пар
-                      </ThemedText>
-                    </View>
-                    <Switch
-                      value={notifications.changesEnabled}
-                      onValueChange={(value) =>
-                        setNotifications({ ...notifications, changesEnabled: value })
-                      }
-                    />
-                  </ThemedView>
-
-                  <ThemedView type="backgroundElement" style={styles.row}>
-                    <View style={styles.rowText}>
-                      <ThemedText type="default">Расписание на завтра</ThemedText>
-                      <ThemedText type="small" themeColor="textSecondary">
-                        {notifications.tomorrowHour == null
-                          ? 'Выключено — выберите час'
-                          : `Каждый день в ${notifications.tomorrowHour}:00`}
-                      </ThemedText>
-                    </View>
-                  </ThemedView>
-
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hourRow}>
-                    {[8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22].map((hour) => (
-                      <Pressable
-                        key={hour}
-                        onPress={() =>
-                          setNotifications({
-                            ...notifications,
-                            tomorrowHour: notifications.tomorrowHour === hour ? null : hour,
-                          })
-                        }
-                        style={({ pressed }) => pressed && styles.pressed}>
-                        <ThemedView
-                          type={notifications.tomorrowHour === hour ? 'backgroundSelected' : 'backgroundElement'}
-                          style={styles.hourChip}>
-                          <ThemedText type="small" themeColor="textSecondary">
-                            {hour}:00
-                          </ThemedText>
-                        </ThemedView>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </>
+                <ThemedView type="backgroundElement" style={styles.row}>
+                  <View style={styles.rowText}>
+                    <ThemedText type="default">Изменения расписания</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Приходят сразу при изменении пар
+                    </ThemedText>
+                  </View>
+                  <Switch
+                    value={notifications.changesEnabled}
+                    onValueChange={(value) =>
+                      setNotifications({ ...notifications, changesEnabled: value })
+                    }
+                  />
+                </ThemedView>
               )}
             </>
           )}
@@ -293,16 +258,6 @@ const styles = StyleSheet.create({
   rowText: {
     flex: 1,
     gap: 2,
-  },
-  hourRow: {
-    marginHorizontal: Spacing.half,
-  },
-  hourChip: {
-    borderRadius: 12,
-    borderCurve: 'continuous',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one + 2,
-    marginRight: Spacing.two,
   },
   hint: {
     marginHorizontal: Spacing.two,
