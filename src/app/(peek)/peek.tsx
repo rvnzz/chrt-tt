@@ -10,8 +10,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { usePreviewGroup } from '@/hooks/use-preview-group';
 import { useSelectedGroup } from '@/hooks/use-selected-group';
 
-export default function PeekScreen() {
-  const router = useRouter();
+export default function PeekScreen() {  const router = useRouter();
   const [preview, setPreview] = usePreviewGroup();
   const [ownGroup] = useSelectedGroup();
   const [showPicker, setShowPicker] = useState(false);
