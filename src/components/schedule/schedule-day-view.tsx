@@ -1,12 +1,5 @@
-import {
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { type ReactNode, useCallback, useMemo, useState } from 'react';
-import { Gesture, GestureDetector, Pressable, ScrollView } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { type ReactNode, useCallback, useState } from 'react';
 
 import { collectDays, collectGroupWeek, findGroupPairs } from '@/api/derive';
 import { pairTimeMap } from '@/api/bells';
@@ -17,7 +10,6 @@ import { EmptyState, PairSkeleton } from '@/components/schedule/states';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { SelectedGroup } from '@/hooks/use-selected-group';
-import { useTheme } from '@/hooks/use-theme';
 import { useBellMap } from '@/hooks/use-bells';
 import { useWeek } from '@/hooks/use-week';
 import { avoidSunday, formatDate, todayISO, weekdayFull } from '@/utils/date';
@@ -32,15 +24,14 @@ type Mode = 'day' | 'week';
 
 /**
  * Расписание группы по дням.
- * Ручка над списком: свайп вверх — неделя, свайп вниз / тап — по дням.
- * Ручка находится вне ScrollView, поэтому жесты не конфликтуют со скроллом.
+ * Полоса дней Пн–Сб: свайп по ней — раскрыть неделю (секции по дням),
+ * ещё свайп — вернуться к просмотру по дням (это же и тапом по полосе не трогается).
  */
 export function ScheduleDayView({ group, banner }: Props) {
   const [mode, setMode] = useState<Mode>('day');
   const [rawAnchor, setRawAnchor] = useState(todayISO());
   const anchor = avoidSunday(rawAnchor);
   const week = useWeek(anchor);
-  const theme = useTheme();
 
   const weekDays = week.data ? collectDays(week.data) : [];
   const bellMap = useBellMap(weekDays.map((day) => day.date));
@@ -49,56 +40,23 @@ export function ScheduleDayView({ group, banner }: Props) {
   const weekPairs = week.data ? collectGroupWeek(week.data, group) : [];
   const selectedDay = week.data?.days.find((day) => day.date === anchor);
 
-  // Конец жеста — по актуальной mode: handlePanEnd в deps memo, пересоздание безопасно
-  const handlePanEnd = useCallback(
-    (translationY: number) => {
-      if (translationY > 24 && mode === 'day') {
-        setMode('week');
-      } else if (translationY < -24 && mode === 'week') {
-        setMode('day');
-      }
-    },
-    [mode],
-  );
-
-  const pan = useMemo(() => {
-    return Gesture.Pan()
-      .activeOffsetY([-16, 16])
-      .failOffsetX([-24, 24])
-      .onEnd((event: { translationY: number }) => {
-        'worklet';
-        runOnJS(handlePanEnd)(event.translationY);
-      });
-  }, [handlePanEnd]);
-
-  const toggle = () => {
-    setMode(mode === 'day' ? 'week' : 'day');
-  };
+  const toggleMode = useCallback(() => {
+    setMode((current) => (current === 'day' ? 'week' : 'day'));
+  }, []);
 
   return (
     <View style={styles.flex}>
-      {/* Хедер (вне скролла): недели + ручка + дни */}
+      {/* Хедер (вне скролла): недели + полоса дней (со свайпом) */}
       <View style={[styles.header, styles.contentWidth]}>
         {banner}
         <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
 
-        <GestureDetector gesture={pan}>
-          <Pressable onPress={toggle} style={styles.handle}>
-            <Text style={[styles.handleHint, { color: theme.textSecondary }]}>
-              {mode === 'day' ? '▼ неделя' : '▲ по дням'}
-            </Text>
-            <View style={[styles.handleBar, { backgroundColor: theme.textSecondary }]} />
-          </Pressable>
-        </GestureDetector>
-
-        {/* Выбор дня (в режиме недели он скрыт) */}
-        {mode === 'day' ? (
-          week.data ? (
-            <DayStrip days={weekDays} selected={anchor} onSelect={setRawAnchor} />
-          ) : (
-            <View style={styles.stripSkeleton} />
-          )
-        ) : null}
+        <DayStrip
+          days={weekDays}
+          selected={anchor}
+          onSelect={setRawAnchor}
+          onSwipe={toggleMode}
+        />
       </View>
 
       {/* Скролл-контент */}
@@ -195,34 +153,15 @@ const styles = StyleSheet.create({
   header: {
     gap: Spacing.three,
     padding: Spacing.three,
-    paddingBottom: 0,
-  },
-  handle: {
-    alignItems: 'center',
-    gap: 2,
-    paddingVertical: Spacing.one,
-  },
-  handleHint: {
-    fontSize: 10,
-    lineHeight: 12,
-  },
-  handleBar: {
-    width: 44,
-    height: 4,
-    borderRadius: 2,
+    paddingBottom: Spacing.two,
   },
   scrollContent: {
     padding: Spacing.three,
+    paddingTop: Spacing.two,
     gap: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.four,
   },
-  stripSkeleton: {
-    height: 72,
-    borderRadius: 16,
-    borderCurve: 'continuous',
-  },
   dayHeader: {
-    marginTop: Spacing.one,
     marginLeft: Spacing.one,
   },
   weekSection: {
@@ -230,8 +169,5 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: Spacing.two,
-  },
-  pressed: {
-    opacity: 0.6,
   },
 });
