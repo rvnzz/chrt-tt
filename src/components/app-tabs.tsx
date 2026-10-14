@@ -31,6 +31,11 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>Группы</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="person.2.gobackward" md="switch_account" />
       </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="(settings)">
+        <NativeTabs.Trigger.Label>Настройки</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="gearshape" md="settings" />
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
