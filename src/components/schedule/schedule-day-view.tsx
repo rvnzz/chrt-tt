@@ -13,7 +13,7 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { SelectedGroup } from '@/hooks/use-selected-group';
 import { useBellMap } from '@/hooks/use-bells';
 import { useWeek } from '@/hooks/use-week';
-import { avoidSunday, formatDate, todayISO, weekdayFull, weekdayIndex } from '@/utils/date';
+import { avoidSunday, addDaysISO, mondayOf, formatDate, formatRange, todayISO, weekdayFull, weekdayIndex } from '@/utils/date';
 
 type Props = {
   /** Расписание группы (студент / «Просмотр») */
@@ -25,6 +25,20 @@ type Props = {
   /** Только недельный режим (таб «Просмотр»): полоса дней и свайп-тумблер скрыты */
   weekOnly?: boolean;
 };
+
+/** Слайдер недель вокруг активной: −2 … +2 */
+function buildWeekOptions(anchor: string) {
+  const currentMonday = mondayOf(anchor);
+
+  return [-2, -1, 0, 1, 2].map((offset) => {
+    const monday = addDaysISO(currentMonday, offset * 7);
+    return {
+      monday,
+      label: formatRange(monday, addDaysISO(monday, 6)),
+      active: offset === 0,
+    };
+  });
+}
 
 type Mode = 'day' | 'week';
 
@@ -75,12 +89,19 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
         {banner}
         <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
 
-        {/* Полоса дней: только в обычном режиме */}
-        {!weekOnly && (
+        {/* Полоса: дни (режим дня) / недели (режим недели) */}
+        {!weekOnly ? (
           <DayStrip
             days={weekDays}
             selected={anchor}
             onSelect={setRawAnchor}
+            onSwipe={toggleMode}
+          />
+        ) : (
+          <DayStrip
+            selected={anchor}
+            weeks={buildWeekOptions(anchor)}
+            onWeekSelect={(monday) => setRawAnchor(monday)}
             onSwipe={toggleMode}
           />
         )}

@@ -9,20 +9,38 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { todayISO, weekdayShort, dayNumber } from '@/utils/date';
+import { avoidSunday, dayNumber, todayISO, weekdayShort } from '@/utils/date';
+
+export type WeekOption = {
+  monday: string;
+  label: string;
+  active: boolean;
+};
 
 type DayStripProps = {
-  days: DayRef[];
+  /** Полоса дней (режим «день») */
+  days?: DayRef[];
   selected: string;
-  onSelect: (date: string) => void;
+  onSelect?: (date: string) => void;
+  /** Полоса недель (режим «неделя») — слайдер недель */
+  weeks?: WeekOption[];
+  onWeekSelect?: (monday: string) => void;
   /** Горизонтальный свайп по полосе — переключить день/неделю */
   onSwipe?: () => void;
 };
 
-/** Полоса дней Пн–Сб (не скроллится — 6 дней влезают), с жестом-свайпом. */
-export function DayStrip({ days, selected, onSelect, onSwipe }: DayStripProps) {
+/** Слайдер-полоса: дни (режим дня) или недели (режим недели); свайп переключает режим. */
+export function DayStrip({
+  days,
+  selected,
+  onSelect,
+  weeks,
+  onWeekSelect,
+  onSwipe,
+}: DayStripProps) {
   const theme = useTheme();
   const today = todayISO();
+  const variant = weeks ? 'weeks' : 'days';
 
   const onSwipeSafe = useCallback(() => {
     onSwipe?.();
@@ -46,17 +64,36 @@ export function DayStrip({ days, selected, onSelect, onSwipe }: DayStripProps) {
     <GestureDetector gesture={pan}>
       <ThemedView type="backgroundElement" style={styles.container}>
         <View style={styles.rowContent}>
-          {days.map((day) => (
-            <DayChip
-              key={day.date}
-              date={day.date}
-              hasSchedule={day.hasSchedule}
-              isSelected={day.date === selected}
-              isToday={day.date === today}
-              onSelect={onSelect}
-              theme={theme}
-            />
-          ))}
+          {variant === 'days'
+            ? days?.map((day) => (
+                <DayChip
+                  key={day.date}
+                  date={day.date}
+                  hasSchedule={day.hasSchedule}
+                  isSelected={day.date === selected}
+                  isToday={day.date === today}
+                  onPress={() => {
+                    if (process.env.EXPO_OS === 'ios') {
+                      void Haptics.selectionAsync();
+                    }
+                    onSelect?.(day.date);
+                  }}
+                  theme={theme}
+                />
+              ))
+            : weeks?.map((week) => (
+                <WeekChip
+                  key={week.monday}
+                  week={week}
+                  onPress={() => {
+                    if (process.env.EXPO_OS === 'ios') {
+                      void Haptics.selectionAsync();
+                    }
+                    onWeekSelect?.(week.monday);
+                  }}
+                  theme={theme}
+                />
+              ))}
         </View>
       </ThemedView>
     </GestureDetector>
@@ -68,17 +105,14 @@ type DayChipProps = {
   hasSchedule: boolean;
   isSelected: boolean;
   isToday: boolean;
-  onSelect: (date: string) => void;
+  onPress: () => void;
   theme: Record<string, string>;
 };
 
-function DayChip({ date, hasSchedule, isSelected, isToday, onSelect, theme }: DayChipProps) {
+function DayChip({ date, hasSchedule, isSelected, isToday, onPress, theme }: DayChipProps) {
   return (
     <Pressable
-      onPress={() => {
-        if (process.env.EXPO_OS === 'ios') Haptics.selectionAsync();
-        onSelect(date);
-      }}
+      onPress={onPress}
       style={({ pressed }) => [
         styles.chip,
         isSelected && { backgroundColor: theme.backgroundSelected },
@@ -109,6 +143,45 @@ function DayChip({ date, hasSchedule, isSelected, isToday, onSelect, theme }: Da
   );
 }
 
+type WeekChipProps = {
+  week: WeekOption;
+  onPress: () => void;
+  theme: Record<string, string>;
+};
+
+function WeekChip({ week, onPress, theme }: WeekChipProps) {
+  const [start, end] = week.label.split('–');
+  const isCurrent = week.active;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        isCurrent && { backgroundColor: theme.backgroundSelected },
+        pressed && { opacity: 0.7 },
+      ]}>
+      <ThemedText
+        type="small"
+        themeColor={isCurrent ? 'text' : 'textSecondary'}
+        style={styles.chipWeekday}>
+        {start}
+      </ThemedText>
+      <ThemedText
+        type="smallBold"
+        themeColor={isCurrent ? 'text' : 'textSecondary'}
+        style={styles.chipNumber}>
+        {end}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+/** Хелпер: убедиться, что monday не воскресенье (не случится, но на всякий случай) */
+export function normalizeMonday(iso: string): string {
+  return avoidSunday(iso);
+}
+
 const styles = StyleSheet.create({
   container: {
     borderRadius: 16,
@@ -137,6 +210,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   chipNumber: {
+    fontSize: 12,
+    lineHeight: 16,
     fontVariant: ['tabular-nums'],
   },
   dotRow: {
