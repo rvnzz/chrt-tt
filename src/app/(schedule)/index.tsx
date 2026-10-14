@@ -35,7 +35,7 @@ export default function ScheduleScreen() {
           title: isTeacher ? myTeacher!.name : group!.name,
           headerRight: () => (
             <Pressable
-              onPress={() => router.push('/profile')}
+              onPress={() => router.push('/settings')}
               hitSlop={10}
               style={({ pressed }) => pressed && styles.pressed}>
               <SettingsIcon />

@@ -18,7 +18,7 @@ const TABS = [
   { href: '/teachers', icon: { ios: 'person.2', web: 'groups' }, label: 'Преподаватели' },
   { href: '/rooms', icon: { ios: 'door.left.hand.open', web: 'meeting_room' }, label: 'Кабинеты' },
   { href: '/peek', icon: { ios: 'person.2.gobackward', web: 'switch_account' }, label: 'Группы' },
-  { href: '/profile', icon: { ios: 'gearshape', web: 'settings' }, label: 'Настройки' },
+  { href: '/settings', icon: { ios: 'gearshape', web: 'settings' }, label: 'Настройки' },
 ] as const;
 
 /** Web-табы в стиле мобилки: нижняя панель с иконками (без бренд-плашки). */

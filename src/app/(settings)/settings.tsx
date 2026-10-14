@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { PUSH_SUPPORTED, useNotificationSettings, useNotificationStatus } from '@/hooks/use-push';
@@ -36,8 +36,6 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.flex}>
-      <Stack.Screen options={{ title: 'Профиль' }} />
-
       <ScrollView
         contentContainerStyle={styles.scroll}
         contentInsetAdjustmentBehavior="automatic">
