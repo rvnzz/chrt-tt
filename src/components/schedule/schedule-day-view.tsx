@@ -41,6 +41,7 @@ import {
   weekdayIndex,
   weekdayShort,
 } from '@/utils/date';
+import { WeekNav } from '@/components/schedule/week-nav';
 
 type Props = {
   group?: SelectedGroup;
@@ -128,6 +129,13 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
   return (
     <View style={styles.flex}>
       {banner ? <View style={[styles.contentWidth, styles.bannerWrap]}>{banner}</View> : null}
+
+      {/* Навигация недель: в состоянии «день» — над полосой (в «неделе» стрелки уже в полосе) */}
+      {mode === 'day' && (
+        <View style={[styles.contentWidth, styles.weekNavWrap]}>
+          <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
+        </View>
+      )}
 
       {/* Полоса-слайдер */}
       <GestureDetector gesture={pan ?? PAN_DISABLED}>
@@ -369,6 +377,10 @@ const styles = StyleSheet.create({
   bannerWrap: {
     padding: Spacing.three,
     paddingBottom: 0,
+  },
+  weekNavWrap: {
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.two,
   },
   container: {
     margin: Spacing.three,
