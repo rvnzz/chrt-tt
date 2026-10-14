@@ -161,3 +161,31 @@ export function collectDays(week: AllWeekData): DayRef[] {
     .filter((day) => weekdayIndex(day.date) !== 6) // воскресенье — не показываем
     .map((day) => ({ date: day.date, hasSchedule: day.has_schedule }));
 }
+
+export type GroupDay = {
+  date: string;
+  pairs: Pair[];
+};
+
+/** Расписание группы на всю неделю (по дням, с парами) */
+export function collectGroupWeek(
+  week: AllWeekData,
+  group: SelectedGroup,
+): GroupDay[] {
+  const result: GroupDay[] = [];
+
+  for (const day of week.days) {
+    if (weekdayIndex(day.date) === 6) continue; // воскресенье не показываем
+
+    const building = day.buildings.find((b) => b.building.slug === group.building_slug);
+    const schedule = building?.group_schedules.find((g) => g.id === group.id);
+
+    const pairs = (schedule?.pairs ?? [])
+      .filter((pair) => pair.has_content && pair.lessons.length > 0)
+      .sort((a, b) => a.number - b.number);
+
+    result.push({ date: day.date, pairs });
+  }
+
+  return result;
+}
