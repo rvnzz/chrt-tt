@@ -55,7 +55,7 @@ export default function PeekScreen() {  const router = useRouter();
               <ThemedText type="smallBold">Сменить группу</ThemedText>
             </Pressable>
           </View>
-          <ScheduleDayView group={preview} banner={banner} />
+          <ScheduleDayView group={preview} weekOnly banner={banner} />
         </>
       ) : (
         <ThemedView style={styles.flex}>

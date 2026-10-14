@@ -18,6 +18,8 @@ type Props = {
   group: SelectedGroup;
   /** Плашка над навигацией (например, «вы смотрите … / ваша — …») */
   banner?: ReactNode;
+  /** Только недельный режим (таб «Просмотр»): полоса дней и свайп-тумблер скрыты */
+  weekOnly?: boolean;
 };
 
 type Mode = 'day' | 'week';
@@ -27,8 +29,8 @@ type Mode = 'day' | 'week';
  * Полоса дней Пн–Сб: свайп по ней — раскрыть неделю (секции по дням),
  * ещё свайп — вернуться к просмотру по дням (это же и тапом по полосе не трогается).
  */
-export function ScheduleDayView({ group, banner }: Props) {
-  const [mode, setMode] = useState<Mode>('day');
+export function ScheduleDayView({ group, banner, weekOnly = false }: Props) {
+  const [mode, setMode] = useState<Mode>(weekOnly ? 'week' : 'day');
   const [rawAnchor, setRawAnchor] = useState(todayISO());
   const anchor = avoidSunday(rawAnchor);
   const week = useWeek(anchor);
@@ -41,8 +43,10 @@ export function ScheduleDayView({ group, banner }: Props) {
   const selectedDay = week.data?.days.find((day) => day.date === anchor);
 
   const toggleMode = useCallback(() => {
-    setMode((current) => (current === 'day' ? 'week' : 'day'));
-  }, []);
+    if (!weekOnly) {
+      setMode((current) => (current === 'day' ? 'week' : 'day'));
+    }
+  }, [weekOnly]);
 
   return (
     <View style={styles.flex}>
@@ -51,12 +55,15 @@ export function ScheduleDayView({ group, banner }: Props) {
         {banner}
         <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
 
-        <DayStrip
-          days={weekDays}
-          selected={anchor}
-          onSelect={setRawAnchor}
-          onSwipe={toggleMode}
-        />
+        {/* Полоса дней: только в обычном режиме (в «недельном» табе её нет) */}
+        {!weekOnly && (
+          <DayStrip
+            days={weekDays}
+            selected={anchor}
+            onSelect={setRawAnchor}
+            onSwipe={toggleMode}
+          />
+        )}
       </View>
 
       {/* Скролл-контент */}
@@ -81,7 +88,7 @@ export function ScheduleDayView({ group, banner }: Props) {
             actionLabel="Повторить"
             onAction={() => week.refetch()}
           />
-        ) : mode === 'day' ? (
+        ) : mode === 'day' && !weekOnly ? (
           <>
             {/* Дата выбранного дня */}
             <ThemedText type="small" themeColor="textSecondary" style={styles.dayHeader}>
