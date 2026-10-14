@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useState } from 'react';
 
@@ -18,7 +18,6 @@ import { avoidSunday, formatDate, todayISO, weekdayFull } from '@/utils/date';
 
 /** Таб «Просмотр»: недельное расписание другой группы (без дневного режима). */
 export default function PeekScreen() {
-  const router = useRouter();
   const [preview, setPreview] = usePreviewGroup();
   const [showPicker, setShowPicker] = useState(false);
 
@@ -46,7 +45,8 @@ export default function PeekScreen() {
           selectedId={preview?.id}
           onSelect={(group) => {
             pick(group);
-            router.back();
+            setPreview(group);
+            setShowPicker(false);
           }}
         />
       </ThemedView>
