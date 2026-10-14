@@ -12,11 +12,9 @@ import {
   Pressable,
 } from 'react-native-gesture-handler';
 import Animated, {
+  FadeIn,
+  FadeOut,
   runOnJS,
-  SlideInLeft,
-  SlideInRight,
-  SlideOutLeft,
-  SlideOutRight,
 } from 'react-native-reanimated';
 import { collectDays, collectGroupWeek, collectTeacherWeek, findGroupPairs } from '@/api/derive';
 import { pairTimeMap } from '@/api/bells';
@@ -30,17 +28,7 @@ import { SelectedGroup } from '@/hooks/use-selected-group';
 import { useTheme } from '@/hooks/use-theme';
 import { useBellMap } from '@/hooks/use-bells';
 import { useWeek } from '@/hooks/use-week';
-import {
-  addDaysISO,
-  avoidSunday,
-  formatDate,
-  formatRange,
-  mondayOf,
-  todayISO,
-  weekdayFull,
-  weekdayIndex,
-  weekdayShort,
-} from '@/utils/date';
+import { avoidSunday, formatDate, todayISO, weekdayFull, weekdayIndex, weekdayShort } from '@/utils/date';
 import { WeekNav } from '@/components/schedule/week-nav';
 
 type Props = {
@@ -68,7 +56,6 @@ function dispatchPanEnd(translationX: number) {
  */
 export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: Props) {
   const [mode, setMode] = useState<Mode>(weekOnly ? 'week' : 'day');
-  const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [rawAnchor, setRawAnchor] = useState(todayISO());
   const anchor = avoidSunday(rawAnchor);
   const week = useWeek(anchor);
@@ -95,19 +82,16 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
   const selectedDay = week.data?.days.find((day) => day.date === anchor);
   const isTeacher = !!teacherId;
 
-  const toggleMode = useCallback(
-    (dir: 'left' | 'right') => {
-      if (weekOnly) return;
-      setDirection(dir);
+  const toggleMode = useCallback(() => {
+    if (!weekOnly) {
       setMode((current) => (current === 'day' ? 'week' : 'day'));
-    },
-    [weekOnly],
-  );
+    }
+  }, [weekOnly]);
 
   function onPanEnd(translationX: number) {
     if (Math.abs(translationX) < 60) return;
     if (weekOnly) return;
-    toggleMode(translationX > 0 ? 'right' : 'left');
+    toggleMode();
   }
 
   useEffect(() => {
@@ -124,27 +108,27 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
       });
   }, []);
 
-  const weekRange = formatRange(mondayOf(anchor), addDaysISO(mondayOf(anchor), 6));
-
   return (
     <View style={styles.flex}>
       {banner ? <View style={[styles.contentWidth, styles.bannerWrap]}>{banner}</View> : null}
 
-      {/* Навигация недель: в состоянии «день» — над полосой (в «неделе» стрелки уже в полосе) */}
-      {mode === 'day' && (
-        <View style={[styles.contentWidth, styles.weekNavWrap]}>
-          <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
-        </View>
-      )}
-
-      {/* Полоса-слайдер */}
+      {/* Полоса-слайдер: фиксированная высота, внутри всегда навигация недель,
+          чипы дней видны только в состоянии «день» */}
       <GestureDetector gesture={pan ?? PAN_DISABLED}>
         <ThemedView type="backgroundElement" style={[styles.container, styles.contentWidth]}>
-          {mode === 'day' && !weekOnly ? (
+          <Animated.View
+            key="week-nav"
+            entering={FadeIn.duration(150)}
+            exiting={FadeOut.duration(120)}
+            style={styles.weekNavRow}>
+            <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
+          </Animated.View>
+
+          {mode === 'day' && !weekOnly && (
             <Animated.View
               key="days"
-              entering={direction === 'right' ? SlideInLeft : SlideInRight}
-              exiting={direction === 'right' ? SlideOutRight : SlideOutLeft}
+              entering={FadeIn.duration(150)}
+              exiting={FadeOut.duration(120)}
               style={styles.rowContent}>
               {days.map((day) => (
                 <DayChip
@@ -162,36 +146,6 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
                   theme={theme}
                 />
               ))}
-            </Animated.View>
-          ) : (
-            <Animated.View
-              key="weeks"
-              entering={direction === 'right' ? SlideInLeft : SlideInRight}
-              exiting={direction === 'right' ? SlideOutRight : SlideOutLeft}
-              style={styles.weekRowContent}>
-              <Pressable
-                onPress={() => setRawAnchor(addDaysISO(rawAnchor, -7))}
-                hitSlop={12}
-                style={({ pressed }) => pressed && styles.pressed}>
-                <ThemedText type="subtitle" style={[styles.weekArrow, { color: theme.text }]}>
-                  ‹
-                </ThemedText>
-              </Pressable>
-
-              <View style={styles.weekLabelBox}>
-                <ThemedText type="smallBold" themeColor="text">
-                  {weekRange}
-                </ThemedText>
-              </View>
-
-              <Pressable
-                onPress={() => setRawAnchor(addDaysISO(rawAnchor, 7))}
-                hitSlop={12}
-                style={({ pressed }) => pressed && styles.pressed}>
-                <ThemedText type="subtitle" style={[styles.weekArrow, { color: theme.text }]}>
-                  ›
-                </ThemedText>
-              </Pressable>
             </Animated.View>
           )}
         </ThemedView>
@@ -378,16 +332,21 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     paddingBottom: 0,
   },
-  weekNavWrap: {
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.two,
-  },
   container: {
     margin: Spacing.three,
     marginTop: Spacing.two,
+    height: 116, // фиксированная высота в обоих состояниях
+    justifyContent: 'center',
+    gap: Spacing.two,
     borderRadius: 16,
     borderCurve: 'continuous',
     overflow: 'hidden',
+  },
+  weekNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.three,
   },
   rowContent: {
     flexDirection: 'row',
@@ -395,20 +354,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: Spacing.two,
     gap: Spacing.one,
-  },
-  weekRowContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 2,
-  },
-  weekLabelBox: {
-    alignItems: 'center',
-  },
-  weekArrow: {
-    lineHeight: 26,
-    paddingHorizontal: Spacing.one,
   },
   chip: {
     borderRadius: 12,
