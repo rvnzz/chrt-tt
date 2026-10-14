@@ -1,63 +1,83 @@
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { type ReactNode, useCallback, useMemo, useState } from 'react';
-
+import * as Haptics from 'expo-haptics';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Gesture,
+  GestureDetector,
+  Pressable,
+} from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  SlideInLeft,
+  SlideInRight,
+  SlideOutLeft,
+  SlideOutRight,
+} from 'react-native-reanimated';
 import { collectDays, collectGroupWeek, collectTeacherWeek, findGroupPairs } from '@/api/derive';
 import { pairTimeMap } from '@/api/bells';
-import { DayStrip } from '@/components/schedule/day-strip';
 import { AssignmentCard } from '@/components/schedule/assignment-card';
 import { PairCard } from '@/components/schedule/pair-card';
-import { WeekNav } from '@/components/schedule/week-nav';
 import { EmptyState, PairSkeleton } from '@/components/schedule/states';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { SelectedGroup } from '@/hooks/use-selected-group';
+import { useTheme } from '@/hooks/use-theme';
 import { useBellMap } from '@/hooks/use-bells';
 import { useWeek } from '@/hooks/use-week';
-import { avoidSunday, addDaysISO, mondayOf, formatDate, formatRange, todayISO, weekdayFull, weekdayIndex } from '@/utils/date';
+import {
+  addDaysISO,
+  avoidSunday,
+  formatDate,
+  formatRange,
+  mondayOf,
+  todayISO,
+  weekdayFull,
+  weekdayIndex,
+  weekdayShort,
+} from '@/utils/date';
 
 type Props = {
-  /** Расписание группы (студент / «Просмотр») */
   group?: SelectedGroup;
-  /** Расписание преподавателя (роль «учитель» на главном экране) */
   teacherId?: number;
-  /** Плашка над навигацией (например, «вы смотрите … / ваша — …») */
   banner?: ReactNode;
-  /** Только недельный режим (таб «Просмотр»): полоса дней и свайп-тумблер скрыты */
+  /** Только недельный режим (таб «Просмотр»): без свайпа и чипов */
   weekOnly?: boolean;
 };
 
-/** Слайдер недель вокруг активной: −2 … +2 */
-function buildWeekOptions(anchor: string) {
-  const currentMonday = mondayOf(anchor);
-
-  return [-2, -1, 0, 1, 2].map((offset) => {
-    const monday = addDaysISO(currentMonday, offset * 7);
-    return {
-      monday,
-      label: formatRange(monday, addDaysISO(monday, 6)),
-      active: offset === 0,
-    };
-  });
-}
-
 type Mode = 'day' | 'week';
 
+/** Мост для worklet: runOnJS вызывает его, он зовёт актуальный onPanEnd (обновляется при рендере) */
+let latestPanEnd: ((translationX: number) => void) | null = null;
+
+function dispatchPanEnd(translationX: number) {
+  latestPanEnd?.(translationX);
+}
+
 /**
- * Расписание группы или преподавателя.
- * Полоса дней Пн–Сб: свайп по ней — раскрыть неделю, ещё свайп — вернуться.
- * (В режиме weekOnly полоса и свайп-тумблер скрыты.)
+ * Расписание группы или преподавателя с полосой-слайдером:
+ *   «день»  — чипы Пн–Сб;
+ *   «неделя»— ‹ даты недели ›.
+ * Горизонтальный свайп по полосе переключает состояния с анимацией.
  */
 export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: Props) {
   const [mode, setMode] = useState<Mode>(weekOnly ? 'week' : 'day');
+  const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [rawAnchor, setRawAnchor] = useState(todayISO());
   const anchor = avoidSunday(rawAnchor);
   const week = useWeek(anchor);
+  const theme = useTheme();
 
-  const weekDays = week.data ? collectDays(week.data) : [];
-  const bellMap = useBellMap(weekDays.map((day) => day.date));
+  const days = week.data ? collectDays(week.data) : [];
+  const bellMap = useBellMap(days.map((day) => day.date));
 
-  // Данные недели: группа или преподаватель (воскресенье везде отфильтровано)
-  const groupDays = week.data && group ? collectGroupWeek(week.data, group) : [];
+  const groupPairs = week.data && group ? findGroupPairs(week.data, group, anchor) : [];
+  const groupWeek = week.data && group ? collectGroupWeek(week.data, group) : [];
 
   const teacherDays = useMemo(
     () =>
@@ -69,43 +89,105 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
     [week.data, teacherId],
   );
 
-  const dayPairs = week.data && group ? findGroupPairs(week.data, group, anchor) : [];
-  const dayItems =
-    teacherDays.find((day) => day.date === anchor)?.items ?? [];
+  const teacherDayItems = teacherDays.find((day) => day.date === anchor)?.items ?? [];
 
   const selectedDay = week.data?.days.find((day) => day.date === anchor);
   const isTeacher = !!teacherId;
 
-  const toggleMode = useCallback(() => {
-    if (!weekOnly) {
+  const toggleMode = useCallback(
+    (dir: 'left' | 'right') => {
+      if (weekOnly) return;
+      setDirection(dir);
       setMode((current) => (current === 'day' ? 'week' : 'day'));
-    }
-  }, [weekOnly]);
+    },
+    [weekOnly],
+  );
+
+  function onPanEnd(translationX: number) {
+    if (Math.abs(translationX) < 60) return;
+    if (weekOnly) return;
+    toggleMode(translationX > 0 ? 'right' : 'left');
+  }
+
+  useEffect(() => {
+    latestPanEnd = onPanEnd;
+  });
+
+  const pan = useMemo(() => {
+    return Gesture.Pan()
+      .activeOffsetX([-60, 60])
+      .failOffsetY([-24, 24])
+      .onEnd((event: { translationX: number }) => {
+        'worklet';
+        runOnJS(dispatchPanEnd)(event.translationX);
+      });
+  }, []);
+
+  const weekRange = formatRange(mondayOf(anchor), addDaysISO(mondayOf(anchor), 6));
 
   return (
     <View style={styles.flex}>
-      {/* Хедер (вне скролла): недели + полоса дней (со свайпом) */}
-      <View style={[styles.header, styles.contentWidth]}>
-        {banner}
-        <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
+      {banner ? <View style={[styles.contentWidth, styles.bannerWrap]}>{banner}</View> : null}
 
-        {/* Полоса: дни (режим дня) / недели (режим недели) */}
-        {!weekOnly ? (
-          <DayStrip
-            days={weekDays}
-            selected={anchor}
-            onSelect={setRawAnchor}
-            onSwipe={toggleMode}
-          />
-        ) : (
-          <DayStrip
-            selected={anchor}
-            weeks={buildWeekOptions(anchor)}
-            onWeekSelect={(monday) => setRawAnchor(monday)}
-            onSwipe={toggleMode}
-          />
-        )}
-      </View>
+      {/* Полоса-слайдер */}
+      <GestureDetector gesture={pan ?? PAN_DISABLED}>
+        <ThemedView type="backgroundElement" style={[styles.container, styles.contentWidth]}>
+          {mode === 'day' && !weekOnly ? (
+            <Animated.View
+              key="days"
+              entering={direction === 'right' ? SlideInLeft : SlideInRight}
+              exiting={direction === 'right' ? SlideOutRight : SlideOutLeft}
+              style={styles.rowContent}>
+              {days.map((day) => (
+                <DayChip
+                  key={day.date}
+                  date={day.date}
+                  hasSchedule={day.hasSchedule}
+                  isSelected={day.date === anchor}
+                  isToday={day.date === todayISO()}
+                  onPress={() => {
+                    if (process.env.EXPO_OS === 'ios') {
+                      void Haptics.selectionAsync();
+                    }
+                    setRawAnchor(day.date);
+                  }}
+                  theme={theme}
+                />
+              ))}
+            </Animated.View>
+          ) : (
+            <Animated.View
+              key="weeks"
+              entering={direction === 'right' ? SlideInLeft : SlideInRight}
+              exiting={direction === 'right' ? SlideOutRight : SlideOutLeft}
+              style={styles.weekRowContent}>
+              <Pressable
+                onPress={() => setRawAnchor(addDaysISO(rawAnchor, -7))}
+                hitSlop={12}
+                style={({ pressed }) => pressed && styles.pressed}>
+                <ThemedText type="subtitle" style={[styles.weekArrow, { color: theme.text }]}>
+                  ‹
+                </ThemedText>
+              </Pressable>
+
+              <View style={styles.weekLabelBox}>
+                <ThemedText type="smallBold" themeColor="text">
+                  {weekRange}
+                </ThemedText>
+              </View>
+
+              <Pressable
+                onPress={() => setRawAnchor(addDaysISO(rawAnchor, 7))}
+                hitSlop={12}
+                style={({ pressed }) => pressed && styles.pressed}>
+                <ThemedText type="subtitle" style={[styles.weekArrow, { color: theme.text }]}>
+                  ›
+                </ThemedText>
+              </Pressable>
+            </Animated.View>
+          )}
+        </ThemedView>
+      </GestureDetector>
 
       {/* Скролл-контент */}
       <ScrollView
@@ -129,17 +211,16 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
             actionLabel="Повторить"
             onAction={() => week.refetch()}
           />
-        ) : mode === 'day' && !weekOnly ? (
+        ) : mode === 'day' ? (
           <>
-            {/* Дата выбранного дня */}
             <ThemedText type="small" themeColor="textSecondary" style={styles.dayHeader}>
               {weekdayFull(anchor)}
             </ThemedText>
 
             <View style={styles.list}>
               {isTeacher ? (
-                dayItems.length > 0 ? (
-                  dayItems.map((assignment, index) => (
+                teacherDayItems.length > 0 ? (
+                  teacherDayItems.map((assignment, index) => (
                     <AssignmentCard
                       key={`${assignment.pair_number}-${index}`}
                       assignment={assignment}
@@ -155,8 +236,8 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
                     }
                   />
                 )
-              ) : dayPairs.length > 0 ? (
-                dayPairs.map((pair) => (
+              ) : groupPairs.length > 0 ? (
+                groupPairs.map((pair) => (
                   <PairCard
                     key={pair.number}
                     pair={pair}
@@ -185,18 +266,24 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
                 {weekdayFull(day.date)}, {formatDate(day.date)}
               </ThemedText>
               <View style={styles.list}>
-                {day.items.map((assignment, index) => (
-                  <AssignmentCard
-                    key={`${assignment.pair_number}-${index}`}
-                    assignment={assignment}
-                    time={pairTimeMap(bellMap.get(day.date)).get(assignment.pair_number)}
-                  />
-                ))}
+                {day.items.length > 0 ? (
+                  day.items.map((assignment, index) => (
+                    <AssignmentCard
+                      key={`${assignment.pair_number}-${index}`}
+                      assignment={assignment}
+                      time={pairTimeMap(bellMap.get(day.date)).get(assignment.pair_number)}
+                    />
+                  ))
+                ) : (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Занятий нет
+                  </ThemedText>
+                )}
               </View>
             </View>
           ))
         ) : (
-          groupDays.map((day) => (
+          groupWeek.map((day) => (
             <View key={day.date} style={styles.weekSection}>
               <ThemedText type="smallBold" themeColor="textSecondary" style={styles.dayHeader}>
                 {weekdayFull(day.date)}, {formatDate(day.date)}
@@ -224,6 +311,52 @@ export function ScheduleDayView({ group, teacherId, banner, weekOnly = false }: 
   );
 }
 
+/** Жест-заглушка: отключён (weekOnly) */
+const PAN_DISABLED = Gesture.Pan().enabled(false);
+
+/** Чип дня */
+function DayChip({ date, hasSchedule, isSelected, isToday, onPress, theme }: DayChipProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        isSelected && { backgroundColor: theme.backgroundSelected },
+        pressed && { opacity: 0.7 },
+      ]}>
+      <ThemedText
+        type="small"
+        themeColor={isSelected ? 'text' : 'textSecondary'}
+        style={styles.chipWeekday}>
+        {weekdayShort(date)}
+      </ThemedText>
+      <ThemedText
+        type="smallBold"
+        themeColor={isSelected ? 'text' : 'textSecondary'}
+        style={styles.chipNumber}>
+        {Number(date.split('-')[2])}
+      </ThemedText>
+
+      <View style={styles.dotRow}>
+        {!hasSchedule ? (
+          <View style={[styles.dot, { backgroundColor: theme.textSecondary }]} />
+        ) : (
+          isToday && <View style={[styles.dot, { backgroundColor: theme.text }]} />
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+type DayChipProps = {
+  date: string;
+  hasSchedule: boolean;
+  isSelected: boolean;
+  isToday: boolean;
+  onPress: () => void;
+  theme: Record<string, string>;
+};
+
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
@@ -233,10 +366,66 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
   },
-  header: {
-    gap: Spacing.three,
+  bannerWrap: {
     padding: Spacing.three,
-    paddingBottom: Spacing.two,
+    paddingBottom: 0,
+  },
+  container: {
+    margin: Spacing.three,
+    marginTop: Spacing.two,
+    borderRadius: 16,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
+  rowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.two,
+    gap: Spacing.one,
+  },
+  weekRowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.three,
+    paddingVertical: Spacing.two + 2,
+  },
+  weekLabelBox: {
+    alignItems: 'center',
+  },
+  weekArrow: {
+    lineHeight: 26,
+    paddingHorizontal: Spacing.one,
+  },
+  chip: {
+    borderRadius: 12,
+    borderCurve: 'continuous',
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 44,
+  },
+  chipWeekday: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  chipNumber: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontVariant: ['tabular-nums'],
+  },
+  dotRow: {
+    height: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
   },
   scrollContent: {
     padding: Spacing.three,
@@ -252,5 +441,8 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: Spacing.two,
+  },
+  pressed: {
+    opacity: 0.6,
   },
 });
