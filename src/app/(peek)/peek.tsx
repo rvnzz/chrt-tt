@@ -1,70 +1,120 @@
 import { Stack, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useState } from 'react';
 
-import { GroupOption, GroupPickerList } from '@/components/schedule/group-picker-list';
-import { ScheduleDayView } from '@/components/schedule/schedule-day-view';
+import { collectDays, collectGroupWeek } from '@/api/derive';
+import { pairTimeMap } from '@/api/bells';
+import { GroupPickerList, type GroupOption } from '@/components/schedule/group-picker-list';
+import { PairCard } from '@/components/schedule/pair-card';
+import { WeekNav } from '@/components/schedule/week-nav';
+import { EmptyState, PairSkeleton } from '@/components/schedule/states';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { usePreviewGroup } from '@/hooks/use-preview-group';
-import { useSelectedGroup } from '@/hooks/use-selected-group';
+import { useBellMap } from '@/hooks/use-bells';
+import { useWeek } from '@/hooks/use-week';
+import { avoidSunday, formatDate, todayISO, weekdayFull } from '@/utils/date';
 
-export default function PeekScreen() {  const router = useRouter();
+/** Таб «Просмотр»: недельное расписание другой группы (без дневного режима). */
+export default function PeekScreen() {
+  const router = useRouter();
   const [preview, setPreview] = usePreviewGroup();
-  const [ownGroup] = useSelectedGroup();
   const [showPicker, setShowPicker] = useState(false);
+
+  const [rawAnchor, setRawAnchor] = useState(todayISO());
+  const anchor = avoidSunday(rawAnchor);
+  const week = useWeek(anchor);
+
+  const days = week.data ? collectDays(week.data) : [];
+  const bellMap = useBellMap(days.map((day) => day.date));
+  const weekPairs = week.data && preview ? collectGroupWeek(week.data, preview) : [];
 
   function pick(group: GroupOption) {
     setPreview(group);
     setShowPicker(false);
-    router.dismiss();
   }
 
-  const banner = preview && (
-    <ThemedView type="backgroundElement" style={styles.banner}>
-      <View style={styles.bannerText}>
-        <ThemedText type="small" selectable>
-          Вы смотрите {preview.name}
-          {ownGroup ? ` (ваша — ${ownGroup.name})` : ''}
+  if (showPicker || !preview) {
+    return (
+      <ThemedView style={styles.flex}>
+        <Stack.Screen options={{ title: 'Просмотр группы' }} />
+        <ThemedText type="small" themeColor="textSecondary" style={styles.pickHint}>
+          Выберите группу — её расписание покажется здесь на всю неделю.
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          Уведомления по-прежнему приходят на вашу группу
-        </ThemedText>
-      </View>
-      {ownGroup && (
-        <Pressable
-          onPress={() => setPreview(null)}
-          hitSlop={6}
-          style={({ pressed }) => pressed && styles.pressed}>
-          <ThemedText type="smallBold">Сброс</ThemedText>
-        </Pressable>
-      )}
-    </ThemedView>
-  );
+        <GroupPickerList
+          selectedId={preview?.id}
+          onSelect={(group) => {
+            pick(group);
+            router.back();
+          }}
+        />
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.flex}>
-      <Stack.Screen options={{ title: 'Просмотр группы' }} />
+      <Stack.Screen options={{ title: preview.name }} />
 
-      {preview && !showPicker ? (
-        <>
-          <View style={[styles.topBar, styles.contentWidth]}>
-            <Pressable onPress={() => setShowPicker(true)}
-              style={({ pressed }) => [pressed && styles.pressed, styles.changeButton]}>
-              <ThemedText type="smallBold">Сменить группу</ThemedText>
-            </Pressable>
-          </View>
-          <ScheduleDayView group={preview} weekOnly banner={banner} />
-        </>
-      ) : (
-        <ThemedView style={styles.flex}>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.pickHint}>
-            Выберите группу — расписание откроется здесь, ваша группа и уведомления не изменятся.
-          </ThemedText>
-          <GroupPickerList selectedId={preview?.id} onSelect={pick} />
-        </ThemedView>
-      )}
+      {/* Хедер: сменить группу + навигация недель */}
+      <View style={[styles.contentWidth, styles.header]}>
+        <Pressable
+          onPress={() => setShowPicker(true)}
+          style={({ pressed }) => [pressed && styles.pressed, styles.changeButton]}>
+          <ThemedText type="smallBold">Сменить группу</ThemedText>
+        </Pressable>
+
+        <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
+      </View>
+
+      {/* Неделя по дням */}
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={[styles.scrollContent, styles.contentWidth]}
+        contentInsetAdjustmentBehavior="automatic"
+        refreshControl={
+          <RefreshControl refreshing={week.isFetching && week.data != null} onRefresh={() => week.refetch()} />
+        }>
+        {week.isLoading ? (
+          <>
+            <PairSkeleton />
+            <PairSkeleton />
+            <PairSkeleton />
+          </>
+        ) : week.isError ? (
+          <EmptyState
+            emoji="📡"
+            title="Не удалось загрузить расписание"
+            description="Проверьте подключение к сети и попробуйте снова."
+            actionLabel="Повторить"
+            onAction={() => week.refetch()}
+          />
+        ) : (
+          weekPairs.map((day) => (
+            <View key={day.date} style={styles.weekSection}>
+              <ThemedText type="smallBold" themeColor="textSecondary" style={styles.dayHeader}>
+                {weekdayFull(day.date)}, {formatDate(day.date)}
+              </ThemedText>
+              <View style={styles.list}>
+                {day.pairs.length > 0 ? (
+                  day.pairs.map((pair) => (
+                    <PairCard
+                      key={pair.number}
+                      pair={pair}
+                      time={pairTimeMap(bellMap.get(day.date)).get(pair.number)}
+                    />
+                  ))
+                ) : (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Занятий нет
+                  </ThemedText>
+                )}
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -78,9 +128,10 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
   },
-  topBar: {
-    padding: Spacing.two,
-    paddingBottom: 0,
+  header: {
+    gap: Spacing.two,
+    padding: Spacing.three,
+    paddingBottom: Spacing.two,
   },
   changeButton: {
     alignSelf: 'flex-start',
@@ -89,21 +140,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderCurve: 'continuous',
   },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    padding: Spacing.two,
-    borderRadius: 12,
-    borderCurve: 'continuous',
-  },
-  bannerText: {
-    flex: 1,
-  },
   pickHint: {
     paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.two,
+    paddingTop: Spacing.two + Spacing.one,
+  },
+  scrollContent: {
+    padding: Spacing.three,
     paddingTop: Spacing.two,
+    gap: Spacing.three,
+    paddingBottom: BottomTabInset + Spacing.four,
+  },
+  weekSection: {
+    gap: Spacing.two,
+  },
+  dayHeader: {
+    marginLeft: Spacing.one,
+  },
+  list: {
+    gap: Spacing.two,
   },
   pressed: {
     opacity: 0.6,
