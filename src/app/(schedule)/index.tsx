@@ -1,6 +1,7 @@
-import { Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import { Pressable, StyleSheet } from 'react-native';
 
+import { SettingsIcon } from '@/components/settings-icon';
 import { RoleFlow } from '@/components/onboarding/role-flow';
 import { ScheduleDayView } from '@/components/schedule/schedule-day-view';
 import { ThemedView } from '@/components/themed-view';
@@ -8,6 +9,7 @@ import { useSelectedGroup } from '@/hooks/use-selected-group';
 import { useMyTeacher, useUserRole } from '@/hooks/use-user';
 
 export default function ScheduleScreen() {
+  const router = useRouter();
   const [role] = useUserRole();
   const [group] = useSelectedGroup();
   const [myTeacher] = useMyTeacher();
@@ -26,11 +28,26 @@ export default function ScheduleScreen() {
   }
 
   const isTeacher = role === 'teacher';
+  // На Android таба «Настройки» нет — доступ через иконку в шапке (сверху справа)
+  const showSettingsIcon = process.env.EXPO_OS === 'android';
 
   return (
     <ThemedView style={styles.flex}>
       <Stack.Screen
-        options={{ title: isTeacher ? myTeacher!.name : group!.name }}
+        options={{
+          title: isTeacher ? myTeacher!.name : group!.name,
+          headerRight:
+            showSettingsIcon === false
+              ? undefined
+              : () => (
+                  <Pressable
+                    onPress={() => router.push('/settings')}
+                    hitSlop={10}
+                    style={({ pressed }) => pressed && styles.pressed}>
+                    <SettingsIcon />
+                  </Pressable>
+                ),
+        }}
       />
 
       {isTeacher ? (
@@ -45,5 +62,8 @@ export default function ScheduleScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+  pressed: {
+    opacity: 0.6,
   },
 });
