@@ -45,12 +45,12 @@
               "label": "Расписание ЧРТ",
               "description": "Пары на сегодня и завтра",
               "previewImage": "./assets/images/widget-preview.png",
-              "minWidth": 220,
-              "minHeight": 140,
+              "minWidth": "240dp",
+              "minHeight": "220dp",
               "targetCellWidth": 3,
               "targetCellHeight": 3,
-              "maxResizeWidth": 440,
-              "maxResizeHeight": 280,
+              "maxResizeWidth": "440dp",
+              "maxResizeHeight": "280dp",
               "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 3600000
             }
