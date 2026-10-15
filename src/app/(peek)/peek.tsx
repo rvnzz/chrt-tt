@@ -29,7 +29,6 @@ export default function PeekScreen() {
   const days = week.data ? collectDays(week.data) : [];
   const bellMap = useBellMap(days.map((day) => day.date));
   const weekPairs = week.data && preview ? collectGroupWeek(week.data, preview) : [];
-        <HeadTitle title={ preview ? `Расписание ЧРТ — ${preview.name}` : 'Группы — Расписание ЧРТ' }/>
 
   function pick(group: GroupOption) {
     setPreview(group);
@@ -57,7 +56,9 @@ export default function PeekScreen() {
 
   return (
     <ThemedView style={styles.flex}>
+      <HeadTitle title={ preview ? `Расписание ЧРТ — ${preview.name}` : 'Группы — Расписание ЧРТ' } />
       <Stack.Screen options={{ title: preview.name }} />
+
 
       {/* Хедер: сменить группу + навигация недель */}
       <View style={[styles.contentWidth, styles.header]}>

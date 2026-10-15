@@ -13,7 +13,6 @@ import { todayISO } from '@/utils/date';
 import { HeadTitle } from '@/components/head-title';
 
 export default function RoomsScreen() {
-        <HeadTitle title={ 'Кабинеты — Расписание ЧРТ' }/>
   const theme = useTheme();
   const week = useWeek(todayISO());
   const [query, setQuery] = useState('');
@@ -23,6 +22,7 @@ export default function RoomsScreen() {
 
   return (
     <ThemedView style={styles.flex}>
+      <HeadTitle title={ 'Кабинеты — Расписание ЧРТ' } />
       <FlatList
         data={filtered}
         keyExtractor={(room) => room.name}
@@ -67,7 +67,7 @@ function RoomRow({ room }: { room: RoomRef }) {
     <Link href={{ pathname: '/r/[name]', params: { name: room.name } }} asChild>
       <Pressable style={({ pressed }) => pressed && styles.pressed}>
         <ThemedView type="backgroundElement" style={styles.row}>
-          <ThemedText type="default" selectable>
+      <HeadTitle title={ 'Кабинеты — Расписание ЧРТ' } />          <ThemedText type="default" selectable>
             Ауд. {room.name}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>

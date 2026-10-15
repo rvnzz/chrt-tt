@@ -29,7 +29,6 @@ export default function ScheduleScreen() {
   }
 
   const isTeacher = role === 'teacher';
-        <HeadTitle title={ isTeacher ? `Расписание ЧРТ — ${myTeacher!.name}` : `Расписание ЧРТ — ${group!.name}` }/>
   // На Android таба «Настройки» нет — доступ через иконку в шапке (сверху справа)
   const showSettingsIcon = process.env.EXPO_OS === 'android';
   const settingsHref = showSettingsIcon ? '/settings-modal' : null;
@@ -51,6 +50,10 @@ export default function ScheduleScreen() {
                   </Pressable>
                 ),
         }}
+      />
+
+      <HeadTitle
+        title={ isTeacher ? `Расписание ЧРТ — ${myTeacher!.name}` : `Расписание ЧРТ — ${group!.name}` }
       />
 
       {isTeacher ? (

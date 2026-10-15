@@ -4,10 +4,9 @@ import { HeadTitle } from '@/components/head-title';
 
 /** Настройки как таб (iOS / web). На Android таб скрыт — модаль внутри (settings-modal). */
 export default function SettingsScreen() {
-        <HeadTitle title={ 'Настройки — Расписание ЧРТ' }/>
   return (
     <ThemedView style={{ flex: 1 }}>
-      <SettingsView />
+      <HeadTitle title={ 'Настройки — Расписание ЧРТ' } />      <SettingsView />
     </ThemedView>
   );
 }

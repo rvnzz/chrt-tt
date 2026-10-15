@@ -13,7 +13,6 @@ import { todayISO } from '@/utils/date';
 import { HeadTitle } from '@/components/head-title';
 
 export default function TeachersScreen() {
-        <HeadTitle title={ 'Преподаватели — Расписание ЧРТ' }/>
   const theme = useTheme();
   const week = useWeek(todayISO());
   const [query, setQuery] = useState('');
@@ -23,6 +22,7 @@ export default function TeachersScreen() {
 
   return (
     <ThemedView style={styles.flex}>
+      <HeadTitle title={ 'Преподаватели — Расписание ЧРТ' } />
       <FlatList
         data={filtered}
         keyExtractor={(teacher) => String(teacher.id)}
@@ -67,7 +67,7 @@ function TeacherRow({ teacher }: { teacher: TeacherRef }) {
     <Link href={{ pathname: '/t/[id]', params: { id: teacher.id, name: teacher.name } }} asChild>
       <Pressable style={({ pressed }) => pressed && styles.pressed}>
         <ThemedView type="backgroundElement" style={styles.row}>
-          <ThemedText type="default" selectable>
+      <HeadTitle title={ 'Преподаватели — Расписание ЧРТ' } />          <ThemedText type="default" selectable>
             {teacher.name}
           </ThemedText>
           {teacher.buildings.length > 0 && (

@@ -10,7 +10,6 @@ import { usePreviewGroup } from '@/hooks/use-preview-group';
 import { HeadTitle } from '@/components/head-title';
 
 export default function GroupsScreen() {
-        <HeadTitle title={ 'Выбор группы — Расписание ЧРТ' }/>
   const router = useRouter();
   const params = useLocalSearchParams<{ preview?: string }>();
   const previewMode = params.preview === '1';
@@ -28,7 +27,7 @@ export default function GroupsScreen() {
 
   return (
     <ThemedView style={{ flex: 1 }}>
-      <Stack.Screen options={{ title: previewMode ? 'Посмотреть группу' : 'Выбор группы' }} />
+      <HeadTitle title={ 'Выбор группы — Расписание ЧРТ' } />      <Stack.Screen options={{ title: previewMode ? 'Посмотреть группу' : 'Выбор группы' }} />
       <GroupPickerList
         selectedId={previewMode ? preview?.id : undefined}
         onSelect={pick}
