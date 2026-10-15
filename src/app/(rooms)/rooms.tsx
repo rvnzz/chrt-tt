@@ -10,8 +10,10 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useWeek } from '@/hooks/use-week';
 import { todayISO } from '@/utils/date';
+import { HeadTitle } from '@/components/head-title';
 
 export default function RoomsScreen() {
+        <HeadTitle title={ 'Кабинеты — Расписание ЧРТ' }/>
   const theme = useTheme();
   const week = useWeek(todayISO());
   const [query, setQuery] = useState('');

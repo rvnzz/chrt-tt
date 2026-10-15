@@ -7,6 +7,7 @@ import { ScheduleDayView } from '@/components/schedule/schedule-day-view';
 import { ThemedView } from '@/components/themed-view';
 import { useSelectedGroup } from '@/hooks/use-selected-group';
 import { useMyTeacher, useUserRole } from '@/hooks/use-user';
+import { HeadTitle } from '@/components/head-title';
 
 export default function ScheduleScreen() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function ScheduleScreen() {
   }
 
   const isTeacher = role === 'teacher';
+        <HeadTitle title={ isTeacher ? `Расписание ЧРТ — ${myTeacher!.name}` : `Расписание ЧРТ — ${group!.name}` }/>
   // На Android таба «Настройки» нет — доступ через иконку в шапке (сверху справа)
   const showSettingsIcon = process.env.EXPO_OS === 'android';
   const settingsHref = showSettingsIcon ? '/settings-modal' : null;

@@ -7,8 +7,10 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { useSelectedGroup } from '@/hooks/use-selected-group';
 import { usePreviewGroup } from '@/hooks/use-preview-group';
+import { HeadTitle } from '@/components/head-title';
 
 export default function GroupsScreen() {
+        <HeadTitle title={ 'Выбор группы — Расписание ЧРТ' }/>
   const router = useRouter();
   const params = useLocalSearchParams<{ preview?: string }>();
   const previewMode = params.preview === '1';

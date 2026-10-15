@@ -15,6 +15,7 @@ import { usePreviewGroup } from '@/hooks/use-preview-group';
 import { useBellMap } from '@/hooks/use-bells';
 import { useWeek } from '@/hooks/use-week';
 import { avoidSunday, formatDate, todayISO, weekdayFull } from '@/utils/date';
+import { HeadTitle } from '@/components/head-title';
 
 /** Таб «Просмотр»: недельное расписание другой группы (без дневного режима). */
 export default function PeekScreen() {
@@ -28,6 +29,7 @@ export default function PeekScreen() {
   const days = week.data ? collectDays(week.data) : [];
   const bellMap = useBellMap(days.map((day) => day.date));
   const weekPairs = week.data && preview ? collectGroupWeek(week.data, preview) : [];
+        <HeadTitle title={ preview ? `Расписание ЧРТ — ${preview.name}` : 'Группы — Расписание ЧРТ' }/>
 
   function pick(group: GroupOption) {
     setPreview(group);
