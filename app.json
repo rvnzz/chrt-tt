@@ -27,7 +27,6 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.rzzx.chrt",
       "versionCode": 2
     },
     "web": {
@@ -37,6 +36,27 @@
     "plugins": [
       "expo-router",
       "./plugins/strip-storage-permissions",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Schedule",
+              "label": "Расписание ЧРТ",
+              "description": "Пары на сегодня и завтра",
+              "previewImage": "./assets/images/widget-preview.png",
+              "minWidth": 220,
+              "minHeight": 140,
+              "targetCellWidth": 3,
+              "targetCellHeight": 3,
+              "maxResizeWidth": 440,
+              "maxResizeHeight": 280,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 3600000
+            }
+          ]
+        }
+      ],
       [
         "expo-updates",
         {

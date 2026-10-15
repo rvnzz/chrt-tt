@@ -1,5 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
 
 import { SettingsIcon } from '@/components/settings-icon';
 import { RoleFlow } from '@/components/onboarding/role-flow';
@@ -8,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useSelectedGroup } from '@/hooks/use-selected-group';
 import { useMyTeacher, useUserRole } from '@/hooks/use-user';
 import { HeadTitle } from '@/components/head-title';
+import { refreshScheduleWidget } from '@/widgets/widget-refresh';
 
 export default function ScheduleScreen() {
   const router = useRouter();
@@ -18,6 +20,13 @@ export default function ScheduleScreen() {
   // Встроенный онбординг: без Redirect и навигации между роутами
   const profileComplete =
     (role === 'student' && !!group) || (role === 'teacher' && !!myTeacher);
+
+  // Обновление Android-виджета данными (при открытии приложения)
+  useEffect(() => {
+    if (process.env.EXPO_OS === 'android' && profileComplete) {
+      void refreshScheduleWidget();
+    }
+  }, [profileComplete, group?.id, myTeacher?.id]);
 
   if (!role || !profileComplete) {
     return (
