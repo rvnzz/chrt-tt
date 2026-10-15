@@ -30,6 +30,7 @@ export default function ScheduleScreen() {
   const isTeacher = role === 'teacher';
   // На Android таба «Настройки» нет — доступ через иконку в шапке (сверху справа)
   const showSettingsIcon = process.env.EXPO_OS === 'android';
+  const settingsHref = showSettingsIcon ? '/settings-modal' : null;
 
   return (
     <ThemedView style={styles.flex}>
@@ -37,11 +38,11 @@ export default function ScheduleScreen() {
         options={{
           title: isTeacher ? myTeacher!.name : group!.name,
           headerRight:
-            showSettingsIcon === false
+            showSettingsIcon === false || !settingsHref
               ? undefined
               : () => (
                   <Pressable
-                    onPress={() => router.push('/settings')}
+                    onPress={() => router.push(settingsHref)}
                     hitSlop={10}
                     style={({ pressed }) => pressed && styles.pressed}>
                     <SettingsIcon />
