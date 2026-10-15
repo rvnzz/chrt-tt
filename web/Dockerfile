@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY app.json tsconfig.json eslint.config.js ./
+COPY app.json tsconfig.json eslint.config.js index.js ./
 COPY src ./src
 COPY assets ./assets
 COPY plugins ./plugins
