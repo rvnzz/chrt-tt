@@ -1,6 +1,6 @@
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 
-import { WIDGET_NAME, WIDGET_ACTIONS, buildScheduleWidget } from './schedule-widget';
+import { WIDGET_NAME, WIDGET_ACTIONS, buildScheduleWidget, ScheduleWidgetPlaceholder } from './schedule-widget';
 import { loadWidgetData } from './widget-data';
 import { storage } from '@/utils/storage';
 
@@ -19,41 +19,55 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     return;
   }
 
-  // Нажатие на ‹/› внутри виджета: переключение сегодня↔завтра
+  const shownDay = (storage.get<number>(WIDGET_MODE_KEY, 0) as 0 | 1) ?? 0;
+
+  // 1) ГАРАНТИРОВАННЫЙ первый рендер (синхронный, без ожиданий) —
+  //    иначе виджет остаётся прозрачным
+  try {
+    renderWidget(ScheduleWidgetPlaceholder());
+  } catch (error) {
+    console.warn('[widget] placeholder render failed:', error);
+  }
+
+  // 2) Рендер из кеша
+  try {
+    const cached = await loadWidgetData(true);
+    renderWidget(buildScheduleWidget(cached, shownDay));
+  } catch (error) {
+    console.warn('[widget] cache render failed:', error);
+  }
+
+  // 3) Нажатие ‹/› внутри виджета — только перерисовка в другом режиме (из кеша)
   if (widgetAction === 'WIDGET_CLICK') {
     const action = props.clickAction;
 
     if (action === WIDGET_ACTIONS.SHOW_TOMORROW) {
       storage.set(WIDGET_MODE_KEY, 1);
+      try {
+        const data = await loadWidgetData(true);
+        renderWidget(buildScheduleWidget(data, 1));
+      } catch (error) {
+        console.warn('[widget] tomorrow render failed:', error);
+      }
     } else if (action === WIDGET_ACTIONS.SHOW_TODAY) {
       storage.set(WIDGET_MODE_KEY, 0);
+      try {
+        const data = await loadWidgetData(true);
+        renderWidget(buildScheduleWidget(data, 0));
+      } catch (error) {
+        console.warn('[widget] today render failed:', error);
+      }
     }
-    // другие действия (OPEN_APP) обрабатываются системой — открытие приложения
-
-    // немедленный рендер в новом режиме из кеша (полный день перезагрузка не нужна)
-    const mode = storage.get<number>(WIDGET_MODE_KEY, 0) as 0 | 1;
-    const data = await loadWidgetData(true);
-    renderWidget(buildScheduleWidget(data, mode));
+    // WIDGET_CLICK не требует повторного рендера в других случаях
     return;
   }
 
-  // 1) мгновенный рендер из кеша — stamый последний сохранённый mode
-  const mode = storage.get<number>(WIDGET_MODE_KEY, 0) as 0 | 1;
+  // 4) Свежие данные из сети (WIDGET_ADDED может пропустить — сеть чуть позже)
   try {
-    const cached = await loadWidgetData(true);
-    renderWidget(buildScheduleWidget(cached, mode));
-  } catch {
-    return;
-  }
-
-  // 2) свежие данные из сети (кроме WIDGET_ADDED — там и кеша достаточно)
-  if (widgetAction !== 'WIDGET_ADDED') {
-    try {
-      const fresh = await loadWidgetData(false);
-      renderWidget(buildScheduleWidget(fresh, mode));
-    } catch {
-      // офлайн — останется кеш
-    }
+    const fresh = await loadWidgetData(false);
+    renderWidget(buildScheduleWidget(fresh, shownDay));
+  } catch (error) {
+    console.warn('[widget] fresh render failed:', error);
   }
 }
 
