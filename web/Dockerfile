@@ -11,6 +11,7 @@ COPY app.json tsconfig.json eslint.config.js index.js ./
 COPY src ./src
 COPY assets ./assets
 COPY plugins ./plugins
+COPY web/inject-web.mjs ./web/inject-web.mjs
 
 # Веб-версия ходит по своему же домену через прокси (см. default.conf.template):
 #   /timet/embed/...   → timet.eremin.tech   (данные расписания)
@@ -20,9 +21,10 @@ ENV EXPO_PUBLIC_PUSH_API_URL=/push-api
 
 RUN npx expo export --platform web
 
-# У статического prerender пустой <title> — прокидываем дефолтный заголовок сайта
-# (на живые переходы expo-router/head всё равно обновит <title> в рантайме)
-RUN sed -i 's|<title data-rh="true"></title>|<title data-rh="true">Расписание ЧРТ</title>|g' dist/*.html
+# GTM (Google Tag Manager) + дефолтный заголовок сайта
+ARG GTM_ID=GTM-TX5CR7L9
+ENV GTM_ID=${GTM_ID}
+RUN node web/inject-web.mjs
 
 # --- раздача ---
 FROM nginx:1.27-alpine
