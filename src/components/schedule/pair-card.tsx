@@ -57,9 +57,19 @@ function LessonRow({ lesson, split }: { lesson: Lesson; split: boolean }) {
         <ThemedText type="default" selectable style={styles.subject}>
           {lesson.subject}
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" selectable style={styles.meta} numberOfLines={1}>
-          {lesson.teacher} · ауд. {lesson.room}
-        </ThemedText>
+        {/* Фамилия сжимается многоточием, кабинет всегда остаётся видимым (узкие экраны, крупный шрифт) */}
+        <View style={styles.metaRow}>
+          {lesson.teacher ? (
+            <ThemedText type="small" themeColor="textSecondary" selectable style={styles.teacherMeta} numberOfLines={1}>
+              {lesson.teacher}
+            </ThemedText>
+          ) : null}
+          {lesson.room ? (
+            <ThemedText type="small" themeColor="textSecondary" selectable style={styles.roomMeta} numberOfLines={1}>
+              {lesson.teacher ? ' · ' : ''}ауд. {lesson.room}
+            </ThemedText>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -111,5 +121,16 @@ const styles = StyleSheet.create({
   subject: {
     flexShrink: 1,
   },
-  meta: {},
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  teacherMeta: {
+    flexShrink: 1,
+  },
+  roomMeta: {
+    // Кабинет не отдаём сжимаемой фамилии место, но и за пределы строки не выпускаем
+    flexShrink: 0,
+    maxWidth: '100%',
+  },
 });

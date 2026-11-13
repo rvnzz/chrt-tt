@@ -42,10 +42,18 @@ export function AssignmentCard({ assignment, mode = 'teacher', time }: Assignmen
         <ThemedText type="default" selectable>
           {assignment.subject}
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" selectable numberOfLines={1}>
-          {assignment.group_name}
-          {assignment.subgroup ? ` (${assignment.subgroup} подгр.)` : ''} · {suffix}
-        </ThemedText>
+        {/* Группа сжимается многоточием, хвост (кабинет/преподаватель) всегда остаётся видимым */}
+        <View style={styles.metaRow}>
+          <ThemedText type="small" themeColor="textSecondary" selectable style={styles.groupMeta} numberOfLines={1}>
+            {assignment.group_name}
+            {assignment.subgroup ? ` (${assignment.subgroup} подгр.)` : ''}
+          </ThemedText>
+          {suffix ? (
+            <ThemedText type="small" themeColor="textSecondary" selectable style={styles.tailMeta} numberOfLines={1}>
+              {' · '}{suffix}
+            </ThemedText>
+          ) : null}
+        </View>
       </View>
     </ThemedView>
   );
@@ -78,5 +86,16 @@ const styles = StyleSheet.create({
   cardBody: {
     flex: 1,
     gap: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  groupMeta: {
+    flexShrink: 1,
+  },
+  tailMeta: {
+    flexShrink: 0,
+    maxWidth: '100%',
   },
 });
