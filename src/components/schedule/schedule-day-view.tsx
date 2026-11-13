@@ -82,39 +82,66 @@ export function ScheduleDayView({ group, teacherId }: Props) {
     [swipeDay],
   );
 
+  // Свайп по полосе дней: та же механика, но листает недели (как стрелки ‹ ›)
+  const swipeWeek = useCallback((dir: 1 | -1) => {
+    setSlideDir(dir);
+    setRawAnchor((prev) => addDaysISO(prev, dir * 7));
+    if (process.env.EXPO_OS === 'ios') {
+      void Haptics.selectionAsync();
+    }
+  }, []);
+
+  const panWeek = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-60, 60])
+        .failOffsetY([-24, 24])
+        .onEnd((event: { translationX: number }) => {
+          'worklet';
+          if (event.translationX <= -60) {
+            runOnJS(swipeWeek)(1); // влево — следующая неделя
+          } else if (event.translationX >= 60) {
+            runOnJS(swipeWeek)(-1); // вправо — предыдущая
+          }
+        }),
+    [swipeWeek],
+  );
+
   return (
     <View style={styles.flex}>
-      {/* Полоса: WeekNav + чипы дней (фиксированная высота) */}
-      <View style={[styles.contentWidth, styles.strip]}>
-        <View style={styles.weekNavRow}>
-          <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
-        </View>
-
-        {week.data ? (
-          <View style={styles.chipsRow}>
-            {days.map((day) => (
-              <DayChip
-                key={day.date}
-                date={day.date}
-                hasSchedule={day.hasSchedule}
-                isSelected={day.date === anchor}
-                isToday={day.date === todayISO()}
-                onPress={() => {
-                  if (process.env.EXPO_OS === 'ios') {
-                    void Haptics.selectionAsync();
-                  }
-                  if (day.date === anchor) return;
-                  setSlideDir(day.date > anchor ? 1 : -1);
-                  setRawAnchor(day.date);
-                }}
-                theme={theme}
-              />
-            ))}
+      {/* Полоса: WeekNav + чипы дней (горизонтальный свайп по ней листает недели) */}
+      <GestureDetector gesture={panWeek}>
+        <View style={[styles.contentWidth, styles.strip]}>
+          <View style={styles.weekNavRow}>
+            <WeekNav date={rawAnchor} onChange={setRawAnchor} week={week.data} />
           </View>
-        ) : (
-          <View style={styles.stripSkeleton} />
-        )}
-      </View>
+
+          {week.data ? (
+            <View style={styles.chipsRow}>
+              {days.map((day) => (
+                <DayChip
+                  key={day.date}
+                  date={day.date}
+                  hasSchedule={day.hasSchedule}
+                  isSelected={day.date === anchor}
+                  isToday={day.date === todayISO()}
+                  onPress={() => {
+                    if (process.env.EXPO_OS === 'ios') {
+                      void Haptics.selectionAsync();
+                    }
+                    if (day.date === anchor) return;
+                    setSlideDir(day.date > anchor ? 1 : -1);
+                    setRawAnchor(day.date);
+                  }}
+                  theme={theme}
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.stripSkeleton} />
+          )}
+        </View>
+      </GestureDetector>
 
       {/* Скролл-контент (горизонтальный свайп по нему листает дни) */}
       <GestureDetector gesture={pan}>

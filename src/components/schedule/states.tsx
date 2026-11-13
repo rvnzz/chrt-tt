@@ -51,7 +51,7 @@ export function ActionButton({ label, onPress }: ActionButtonProps) {
 export function InlineError({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <ThemedView type="backgroundElement" style={styles.errorCard}>
-      <ThemedText type="small" selectable>
+      <ThemedText type="small">
         {message}
       </ThemedText>
       {onRetry && (

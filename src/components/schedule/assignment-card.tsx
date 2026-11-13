@@ -39,17 +39,17 @@ export function AssignmentCard({ assignment, mode = 'teacher', time }: Assignmen
       </View>
 
       <View style={styles.cardBody}>
-        <ThemedText type="default" selectable>
+        <ThemedText type="default">
           {assignment.subject}
         </ThemedText>
         {/* Группа сжимается многоточием, хвост (кабинет/преподаватель) всегда остаётся видимым */}
         <View style={styles.metaRow}>
-          <ThemedText type="small" themeColor="textSecondary" selectable style={styles.groupMeta} numberOfLines={1}>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.groupMeta} numberOfLines={1}>
             {assignment.group_name}
             {assignment.subgroup ? ` (${assignment.subgroup} подгр.)` : ''}
           </ThemedText>
           {suffix ? (
-            <ThemedText type="small" themeColor="textSecondary" selectable style={styles.tailMeta} numberOfLines={1}>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.tailMeta} numberOfLines={1}>
               {' · '}{suffix}
             </ThemedText>
           ) : null}

@@ -25,7 +25,7 @@ export function OtaBanner() {
     <View pointerEvents="box-none" style={[styles.container, { top: insets.top + Spacing.two }]}>
       <ThemedView type="backgroundElement" style={styles.banner}>
         <View style={styles.textBlock}>
-          <ThemedText type="smallBold" selectable>
+          <ThemedText type="smallBold">
             Доступно обновление
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">

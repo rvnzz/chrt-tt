@@ -74,7 +74,7 @@ export function GroupPickerList({ selectedId, onSelect }: GroupPickerListProps) 
           <Pressable onPress={() => onSelect(item)} style={({ pressed }) => pressed && styles.pressed}>
             <ThemedView type={isSelected ? 'backgroundSelected' : 'backgroundElement'} style={styles.row}>
               <View style={styles.rowText}>
-                <ThemedText type="default" selectable>
+                <ThemedText type="default">
                   {item.name}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">

@@ -67,7 +67,7 @@ function TeacherRow({ teacher }: { teacher: TeacherRef }) {
     <Link href={{ pathname: '/t/[id]', params: { id: teacher.id, name: teacher.name } }} asChild>
       <Pressable style={({ pressed }) => pressed && styles.pressed}>
         <ThemedView type="backgroundElement" style={styles.row}>
-      <HeadTitle title={ 'Преподаватели — Расписание ЧРТ' } />          <ThemedText type="default" selectable>
+      <HeadTitle title={ 'Преподаватели — Расписание ЧРТ' } />          <ThemedText type="default">
             {teacher.name}
           </ThemedText>
           {teacher.buildings.length > 0 && (

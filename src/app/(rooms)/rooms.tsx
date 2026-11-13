@@ -67,7 +67,7 @@ function RoomRow({ room }: { room: RoomRef }) {
     <Link href={{ pathname: '/r/[name]', params: { name: room.name } }} asChild>
       <Pressable style={({ pressed }) => pressed && styles.pressed}>
         <ThemedView type="backgroundElement" style={styles.row}>
-      <HeadTitle title={ 'Кабинеты — Расписание ЧРТ' } />          <ThemedText type="default" selectable>
+      <HeadTitle title={ 'Кабинеты — Расписание ЧРТ' } />          <ThemedText type="default">
             Ауд. {room.name}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>

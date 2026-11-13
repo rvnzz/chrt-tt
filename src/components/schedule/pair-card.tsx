@@ -54,18 +54,18 @@ function LessonRow({ lesson, split }: { lesson: Lesson; split: boolean }) {
       )}
 
       <View style={styles.lessonContent}>
-        <ThemedText type="default" selectable style={styles.subject}>
+        <ThemedText type="default" style={styles.subject}>
           {lesson.subject}
         </ThemedText>
         {/* Фамилия сжимается многоточием, кабинет всегда остаётся видимым (узкие экраны, крупный шрифт) */}
         <View style={styles.metaRow}>
           {lesson.teacher ? (
-            <ThemedText type="small" themeColor="textSecondary" selectable style={styles.teacherMeta} numberOfLines={1}>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.teacherMeta} numberOfLines={1}>
               {lesson.teacher}
             </ThemedText>
           ) : null}
           {lesson.room ? (
-            <ThemedText type="small" themeColor="textSecondary" selectable style={styles.roomMeta} numberOfLines={1}>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.roomMeta} numberOfLines={1}>
               {lesson.teacher ? ' · ' : ''}ауд. {lesson.room}
             </ThemedText>
           ) : null}

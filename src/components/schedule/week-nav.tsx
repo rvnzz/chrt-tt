@@ -20,7 +20,10 @@ export function WeekNav({ date, onChange, week }: WeekNavProps) {
 
   return (
     <View style={styles.container}>
-      <Pressable onPress={() => onChange(addDaysISO(date, -7))} style={({ pressed }) => pressed && styles.pressed}>
+      <Pressable
+        onPress={() => onChange(addDaysISO(date, -7))}
+        hitSlop={12}
+        style={({ pressed }) => [styles.navButton, pressed && styles.pressed]}>
         <ThemedText type="subtitle" style={[styles.arrow, { color: theme.text }]}>
           ‹
         </ThemedText>
@@ -30,7 +33,10 @@ export function WeekNav({ date, onChange, week }: WeekNavProps) {
         {week ? formatRange(week.week_start, week.week_end) : '…'}
       </ThemedText>
 
-      <Pressable onPress={() => onChange(addDaysISO(date, 7))} style={({ pressed }) => pressed && styles.pressed}>
+      <Pressable
+        onPress={() => onChange(addDaysISO(date, 7))}
+        hitSlop={12}
+        style={({ pressed }) => [styles.navButton, pressed && styles.pressed]}>
         <ThemedText type="subtitle" style={[styles.arrow, { color: theme.text }]}>
           ›
         </ThemedText>
@@ -49,6 +55,13 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontSize: 24,
     paddingHorizontal: Spacing.one,
+  },
+  navButton: {
+    // Не меньше зоны касания 48×48 + hitSlop сверху
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pressed: {
     opacity: 0.6,
