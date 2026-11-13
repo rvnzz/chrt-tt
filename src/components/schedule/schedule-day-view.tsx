@@ -1,7 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { useState } from 'react';
-import { Pressable } from 'react-native-gesture-handler';
+import { useCallback, useMemo, useState } from 'react';
+import { Gesture, GestureDetector, Pressable } from 'react-native-gesture-handler';
+import Animated, { FadeInLeft, FadeInRight, runOnJS } from 'react-native-reanimated';
 
 import { WeekNav } from '@/components/schedule/week-nav';
 import { AssignmentCard } from '@/components/schedule/assignment-card';
@@ -15,7 +16,14 @@ import { SelectedGroup } from '@/hooks/use-selected-group';
 import { useTheme } from '@/hooks/use-theme';
 import { useBellMap } from '@/hooks/use-bells';
 import { useWeek } from '@/hooks/use-week';
-import { avoidSunday, todayISO, weekdayFull, weekdayShort } from '@/utils/date';
+import {
+  addDaysISO,
+  avoidSunday,
+  todayISO,
+  weekdayFull,
+  weekdayIndex,
+  weekdayShort,
+} from '@/utils/date';
 
 type Props = {
   group?: SelectedGroup;
@@ -41,7 +49,38 @@ export function ScheduleDayView({ group, teacherId }: Props) {
   const selectedDay = week.data?.days.find((day) => day.date === anchor);
   const isTeacher = !!teacherId;
 
-  // Реаутентификатор для Gesture API больше не нужен — жестов в этом виде нет
+  // Направление последнего переключения дня — для анимации появления контента
+  const [slideDir, setSlideDir] = useState<1 | -1 | null>(null);
+
+  // Свайп по контенту: следующий/предыдущий день. Базой берём показанный день,
+  // воскресенье пропускаем (его в ленте нет), граница недели пересекается естественно —
+  // useWeek подтянет данные следующей недели по ключу понедельника.
+  const swipeDay = useCallback((dir: 1 | -1) => {
+    setSlideDir(dir);
+    setRawAnchor((prev) => {
+      const next = addDaysISO(avoidSunday(prev), dir);
+      return weekdayIndex(next) === 6 ? addDaysISO(next, dir) : next;
+    });
+    if (process.env.EXPO_OS === 'ios') {
+      void Haptics.selectionAsync();
+    }
+  }, []);
+
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-60, 60]) // срабатывает только явный горизонтальный свайп
+        .failOffsetY([-24, 24]) // вертикальное движение отдаём скроллу и pull-to-refresh
+        .onEnd((event: { translationX: number }) => {
+          'worklet';
+          if (event.translationX <= -60) {
+            runOnJS(swipeDay)(1); // влево — следующий день
+          } else if (event.translationX >= 60) {
+            runOnJS(swipeDay)(-1); // вправо — предыдущий
+          }
+        }),
+    [swipeDay],
+  );
 
   return (
     <View style={styles.flex}>
@@ -64,6 +103,8 @@ export function ScheduleDayView({ group, teacherId }: Props) {
                   if (process.env.EXPO_OS === 'ios') {
                     void Haptics.selectionAsync();
                   }
+                  if (day.date === anchor) return;
+                  setSlideDir(day.date > anchor ? 1 : -1);
                   setRawAnchor(day.date);
                 }}
                 theme={theme}
@@ -75,78 +116,88 @@ export function ScheduleDayView({ group, teacherId }: Props) {
         )}
       </View>
 
-      {/* Скролл-контент */}
-      <ScrollView
-        style={styles.flex}
-        contentContainerStyle={[styles.scrollContent, styles.contentWidth]}
-        contentInsetAdjustmentBehavior="automatic"
-        refreshControl={
-          <RefreshControl refreshing={week.isFetching && week.data != null} onRefresh={() => week.refetch()} />
-        }>
-        {week.isLoading ? (
-          <>
-            <PairSkeleton />
-            <PairSkeleton />
-            <PairSkeleton />
-          </>
-        ) : week.isError ? (
-          <EmptyState
-            emoji="📡"
-            title="Не удалось загрузить расписание"
-            description="Проверьте подключение к сети и попробуйте снова."
-            actionLabel="Повторить"
-            onAction={() => week.refetch()}
-          />
-        ) : (
-          <>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.dayHeader}>
-              {weekdayFull(anchor)}
-            </ThemedText>
+      {/* Скролл-контент (горизонтальный свайп по нему листает дни) */}
+      <GestureDetector gesture={pan}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={[styles.scrollContent, styles.contentWidth]}
+          contentInsetAdjustmentBehavior="automatic"
+          refreshControl={
+            <RefreshControl refreshing={week.isFetching && week.data != null} onRefresh={() => week.refetch()} />
+          }>
+          {week.isLoading ? (
+            <>
+              <PairSkeleton />
+              <PairSkeleton />
+              <PairSkeleton />
+            </>
+          ) : week.isError ? (
+            <EmptyState
+              emoji="📡"
+              title="Не удалось загрузить расписание"
+              description="Проверьте подключение к сети и попробуйте снова."
+              actionLabel="Повторить"
+              onAction={() => week.refetch()}
+            />
+          ) : (
+            /* key + entering: контент въезжает в направлении свайпа/нажатого чипа */
+            <Animated.View
+              key={anchor}
+              style={styles.dayContent}
+              entering={
+                slideDir === null
+                  ? undefined
+                  : (slideDir === 1 ? FadeInRight : FadeInLeft).duration(150)
+              }>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.dayHeader}>
+                {weekdayFull(anchor)}
+              </ThemedText>
 
-            <View style={styles.list}>
-              {isTeacher ? (
-                teacherDayItems.length > 0 ? (
-                  teacherDayItems.map((assignment, index) => (
-                    <AssignmentCard
-                      key={`${assignment.pair_number}-${index}`}
-                      assignment={assignment}
-                      time={pairTimeMap(bellMap.get(anchor)).get(assignment.pair_number)}
+              <View style={styles.list}>
+                {isTeacher ? (
+                  teacherDayItems.length > 0 ? (
+                    teacherDayItems.map((assignment, index) => (
+                      <AssignmentCard
+                        key={`${assignment.pair_number}-${index}`}
+                        assignment={assignment}
+                        time={pairTimeMap(bellMap.get(anchor)).get(assignment.pair_number)}
+                      />
+                    ))
+                  ) : (
+                    <EmptyState
+                      emoji="☕"
+                      title="В этот день пар нет"
+                      description={
+                        selectedDay === undefined ? 'День вне диапазона этой недели.' : undefined
+                      }
+                    />
+                  )
+                ) : dayPairs.length > 0 ? (
+                  dayPairs.map((pair) => (
+                    <PairCard
+                      key={pair.number}
+                      pair={pair}
+                      time={pairTimeMap(bellMap.get(anchor)).get(pair.number)}
                     />
                   ))
                 ) : (
                   <EmptyState
                     emoji="☕"
-                    title="В этот день пар нет"
+                    title="Занятий нет"
                     description={
-                      selectedDay === undefined ? 'День вне диапазона этой недели.' : undefined
+                      selectedDay === undefined
+                        ? 'День вне диапазона этой недели.'
+                        : selectedDay.has_schedule
+                          ? `В этот день пар у группы ${group!.name} не запланировано.`
+                          : 'Расписание на этот день не опубликовано.'
                     }
                   />
-                )
-              ) : dayPairs.length > 0 ? (
-                dayPairs.map((pair) => (
-                  <PairCard
-                    key={pair.number}
-                    pair={pair}
-                    time={pairTimeMap(bellMap.get(anchor)).get(pair.number)}
-                  />
-                ))
-              ) : (
-                <EmptyState
-                  emoji="☕"
-                  title="Занятий нет"
-                  description={
-                    selectedDay === undefined
-                      ? 'День вне диапазона этой недели.'
-                      : selectedDay.has_schedule
-                        ? `В этот день пар у группы ${group!.name} не запланировано.`
-                        : 'Расписание на этот день не опубликовано.'
-                  }
-                />
-              )}
-            </View>
-          </>
-        )}
-      </ScrollView>
+                )}
+              </View>
+            </Animated.View>
+          )}
+        </ScrollView>
+      </GestureDetector>
     </View>
   );
 }
@@ -263,6 +314,9 @@ const styles = StyleSheet.create({
   },
   dayHeader: {
     marginLeft: Spacing.one,
+  },
+  dayContent: {
+    gap: Spacing.three,
   },
   list: {
     gap: Spacing.two,
