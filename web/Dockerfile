@@ -14,7 +14,7 @@ COPY plugins ./plugins
 COPY web/inject-web.mjs ./web/inject-web.mjs
 
 # Веб-версия ходит по своему же домену через прокси (см. default.conf.template):
-#   /timet/embed/...   → timet.eremin.tech   (данные расписания)
+#   /timet/api/...     → push.schrt.ru   (данные расписания)
 #   /push-api/...      → pushtt (регистрация пушей, звонки)
 ENV EXPO_PUBLIC_TIMET_API_URL=/timet
 ENV EXPO_PUBLIC_PUSH_API_URL=/push-api
@@ -30,12 +30,12 @@ RUN node web/inject-web.mjs
 FROM nginx:1.27-alpine
 
 # Дефолты (compose/env может переопределить)
-ENV TIMET_UPSTREAM=https://timet.eremin.tech
+ENV TIMET_UPSTREAM=https://push.schrt.ru
 ENV WEB_PUSH_BACKEND=http://host.docker.internal:4000
 
 COPY web/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # WEB_PUSH_BACKEND — адрес pushtt (HTTP), напр. http://host.docker.internal:4000
-# TIMET_UPSTREAM     — источник расписания, напр. https://timet.eremin.tech
+# TIMET_UPSTREAM     — источник расписания, напр. https://push.schrt.ru
 EXPOSE 80

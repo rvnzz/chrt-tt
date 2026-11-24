@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       WEB_PUSH_BACKEND: ${WEB_PUSH_BACKEND:-http://host.docker.internal:4000}
-      TIMET_UPSTREAM: ${TIMET_UPSTREAM:-https://timet.eremin.tech}
+      TIMET_UPSTREAM: ${TIMET_UPSTREAM:-https://push.schrt.ru}
     ports:
       - '${WEB_PORT:-8080}:80'
     extra_hosts:

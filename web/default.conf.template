@@ -13,10 +13,11 @@ server {
     gzip_types text/css application/javascript application/json image/svg+xml;
 
     # Прокси: данные расписания (same-origin для web-приложения)
+    # TIMET_UPSTREAM задаётся в Dockerfile/compose, по умолчанию push.schrt.ru.
+    # envsubst подставляет его при старте nginx, поэтому upstream литеральный.
     location /timet/ {
-        proxy_pass https://timet.eremin.tech;
+        proxy_pass ${TIMET_UPSTREAM};
         proxy_ssl_server_name on;
-        proxy_set_header Host timet.eremin.tech;
         rewrite ^/timet/(.*)$ /$1 break;
     }
 
