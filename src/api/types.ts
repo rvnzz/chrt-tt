@@ -1,6 +1,6 @@
 /**
- * Типы ответа API timet.eremin.tech
- * GET /embed/all/week/data?date=YYYY-MM-DD
+ * Типы ответа API push.schrt.ru
+ * GET /api/week?date=YYYY-MM-DD
  */
 
 export type Building = {
